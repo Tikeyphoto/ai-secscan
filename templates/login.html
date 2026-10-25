@@ -1,17 +1,22 @@
-﻿<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Вход</title><style>
-    body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .auth-box { background: #313244; padding: 30px; border-radius: 8px; width: 300px; text-align: center; }
-    input { width: 90%; padding: 10px; margin: 10px 0; background: #1e1e2e; border: 1px solid #45475a; color: white; border-radius: 5px; }
-    button { width: 100%; padding: 10px; background: #89b4fa; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: 10px; color: #1e1e2e; }
-    a { color: #89b4fa; text-decoration: none; display: block; margin-top: 15px; font-size: 14px; }
-    .error-msg { background: #f38ba8; color: #1e1e2e; padding: 10px; border-radius: 5px; font-weight: bold; margin-bottom: 15px; font-size: 14px; }
-</style></head>
-<body><div class='auth-box'>
-<h2>Вход</h2>
-{% if error %}<div class='error-msg'>{{ error }}</div>{% endif %}
-<form method='POST'>
-<input type='text' name='username' placeholder='Логин' required>
-<input type='password' name='password' placeholder='Пароль' required>
-<button type='submit'>Войти</button></form>
-<a href='/register'>Нет аккаунта? Зарегистрироваться</a>
-</div></body></html>
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход - AI-SecScan</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-box">
+            <h2><i class="fa-solid fa-shield-halved"></i> Вход</h2>
+            {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+            <form method="POST">
+                <input type="text" name="username" placeholder="Логин" required>
+                <input type="password" name="password" placeholder="Пароль" required>
+                <button type="submit" class="btn" style="width: 100%; justify-content: center;">Войти</button>
+            </form>
+            <a href="/register" class="auth-link">Нет аккаунта? Зарегистрироваться</a>
+        </div>
+    </div>
+</body>
+</html>

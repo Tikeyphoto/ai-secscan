@@ -2,96 +2,107 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AI-SecScan SaaS</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #313244; padding-bottom: 10px; margin-bottom: 20px; }
-        h1 { color: #89b4fa; margin: 0; }
-        .user-info { background: #313244; padding: 10px; border-radius: 5px; font-size: 14px; display: flex; align-items: center; }
-        .btn-logout { background: #f38ba8; color: #1e1e2e; padding: 5px 10px; text-decoration: none; border-radius: 3px; font-weight: bold; margin-left: 15px; }
-        
-        /* Блок AI-переключателя */
-        .ai-toggle-box { background: #313244; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #cba6f7; display: flex; align-items: center; }
-        .ai-toggle-box input { transform: scale(1.5); margin-right: 15px; cursor: pointer; }
-        .ai-toggle-box label { color: #cba6f7; font-weight: bold; cursor: pointer; font-size: 16px; }
-        
-        .upload-section { background: #313244; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px dashed #89b4fa; }
-        textarea { width: 100%; height: 200px; background: #313244; color: #a6e3a1; border: 1px solid #45475a; padding: 10px; font-family: monospace; border-radius: 5px; }
-        button { background: #89b4fa; color: #1e1e2e; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: 10px; }
-        .finding { background: #313244; padding: 15px; margin-bottom: 15px; border-radius: 5px; border-left: 5px solid #f38ba8; }
-        .finding.HIGH { border-left-color: #f9e2af; }
-        .finding.MEDIUM { border-left-color: #f9e2af; }
-        .finding.AI_LOGIC_FLAW { border-left-color: #cba6f7; }
-        .code { font-family: monospace; background: #11111b; padding: 5px; border-radius: 3px; display: block; margin-top: 5px; }
-        .btn-feedback { padding: 5px 10px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; }
-        .btn-tp { background: #a6e3a1; color: #1e1e2e; }
-        .btn-fp { background: #f38ba8; color: #1e1e2e; }
-        .error-box { background: #f38ba8; color: #11111b; padding: 15px; border-radius: 5px; font-weight: bold; border-left: 5px solid #d20f39; margin-bottom: 15px;}
-        .btn-report { color: #1e1e2e; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-right: 10px; }
-        .link-pro { color: #1e1e2e; text-decoration: underline; font-weight: bold; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-SecScan - Анализ безопасности</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <nav class="navbar">
+        <div class="logo"><i class="fa-solid fa-shield-halved"></i> AI-SecScan</div>
+        <div class="user-nav">
+            <span><i class="fa-regular fa-user"></i> {{ user['username'] }}</span>
+            <a href="/profile" style="color: var(--text-main); text-decoration: none; margin-left: 15px; font-size: 14px;"><i class="fa-solid fa-id-card"></i> Профиль</a>
+            <a href="/logout" class="btn-logout">Выйти</a>
+        </div>
+    </nav>
+
     <div class="container">
-        <div class="header">
-            <h1>🛡️ AI-SecScan SaaS</h1>
-            <div class="user-info">
-                👤 {{ user['username'] }} 
-                <a href="/profile" style="color: #89b4fa; text-decoration: none; margin-left: 15px;">Мой профиль</a>
-                <a href="/logout" class="btn-logout">Выйти</a>
+        <div class="card" style="margin-top: 20px;">
+            <label class="ai-switch" for="useAi">
+                <input type="checkbox" id="useAi">
+                <label for="useAi"><i class="fa-solid fa-robot"></i> Включить глубокий AI-анализ (LLM) для поиска логических ошибок</label>
+            </label>
+
+            <div class="drop-zone" id="dropZone">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <p style="font-size: 18px; font-weight: 600;">Перетащите файл сюда или нажмите для выбора</p>
+                <p>Поддерживаются: ZIP-архивы, .py, .js, .php, .java, .env, .yml, .json</p>
+                <div class="file-name" id="fileName"></div>
+                <input type="file" id="fileInput" style="display: none;" accept=".zip,.py,.js,.php,.java,.ts,.env,.yml,.yaml,.json,.txt,.cfg,.ini,.xml">
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" id="scanFileBtn" onclick="scanFile()" disabled style="font-size: 16px; padding: 12px 30px;">
+                    <i class="fa-solid fa-magnifying-glass"></i> Сканировать файл
+                </button>
             </div>
         </div>
-        
-        <!-- Перенесли галочку AI наверх -->
-        <div class="ai-toggle-box">
-            <input type="checkbox" id="useAi">
-            <label for="useAi">Включить глубокий AI-анализ (LLM) для поиска логических уязвимостей</label>
+
+        <div class="card">
+            <p style="margin-top: 0; color: var(--text-muted); font-size: 14px;">Или вставьте код вручную:</p>
+            <textarea id="codeInput" placeholder="def my_function():\n    pass"></textarea>
+            <div style="text-align: right; margin-top: 10px;">
+                <button class="btn" onclick="scanCode()"><i class="fa-solid fa-code"></i> Сканировать текст</button>
+            </div>
         </div>
 
-        <div class="upload-section">
-            <p>📁 Загрузите файл или <b>ZIP-архив</b> (Поддерживается поиск секретов в .env, .json, .yml):</p>
-            <input type="file" id="fileInput" accept=".zip,.py,.js,.php,.java,.ts,.env,.yml,.yaml,.json,.txt,.cfg,.ini,.xml">
-            <button onclick="scanFile()">Сканировать файл</button>
-        </div>
-
-        <p>Или вставьте код вручную:</p>
-        <textarea id="codeInput" placeholder="Вставьте код сюда..."></textarea>
-        <button onclick="scanCode()">Сканировать текст</button>
-        
-        <div id="results" style="margin-top: 20px;"></div>
+        <div id="loader" class="spinner"></div>
+        <div id="results"></div>
     </div>
 
     <script>
-        window.addEventListener('DOMContentLoaded', loadLastScan);
+        // Drag & Drop логика
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const scanFileBtn = document.getElementById('scanFileBtn');
 
-                async function loadLastScan() {
-            try {
-                const response = await fetch('/api/last_scan');
-                const data = await response.json();
-                if (data.status === 'success') {
-                    handleResponse(data, true); // true = это историческое сканирование
-                }
-            } catch (e) { console.log("Нет предыдущих сканирований"); }
-        }
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileName();
+            }
+        });
 
-        function showLoading() {
-            document.getElementById('results').innerHTML = '<p>⏳ Анализ... (если включен AI, это может занять до 30 секунд)</p>';
-        }
+        fileInput.addEventListener('change', updateFileName);
 
-        function handleError(status, data) {
-            const resultsDiv = document.getElementById('results');
-            let errorMsg = data.error || `HTTP ${status}`;
-            if (status === 403) {
-                resultsDiv.innerHTML = `<div class="error-box">⚠️ ${errorMsg} <br><br><a href="/profile" class="link-pro">Перейти в профиль, чтобы сменить тариф →</a></div>`;
+        function updateFileName() {
+            if (fileInput.files.length > 0) {
+                fileName.innerHTML = `<i class="fa-solid fa-file-code"></i> Выбран файл: ${fileInput.files[0].name}`;
+                scanFileBtn.disabled = false;
             } else {
-                resultsDiv.innerHTML = `<div class="error-box">Ошибка: ${errorMsg}</div>`;
+                fileName.innerHTML = '';
+                scanFileBtn.disabled = true;
             }
         }
 
+        // Логика сканирования
+        function showLoading() {
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function hideLoading() { document.getElementById('loader').style.display = 'none'; }
+
+        function handleError(status, data) {
+            hideLoading();
+            const resultsDiv = document.getElementById('results');
+            let errorMsg = data.error || `HTTP ${status}`;
+            let actionHtml = status === 403 ? `<br><br><a href="/profile" style="color: white;">Перейти в профиль, чтобы сменить тариф →</a>` : '';
+            resultsDiv.innerHTML = `<div class="error-msg" style="font-size: 16px; padding: 20px;">⚠️ ${errorMsg} ${actionHtml}</div>`;
+        }
+
         async function scanFile() {
-            const fileInput = document.getElementById('fileInput');
-            if (!fileInput.files.length) return alert("Выберите файл!");
+            if (!fileInput.files.length) return;
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             formData.append('use_ai', document.getElementById('useAi').checked);
@@ -100,9 +111,10 @@
             try {
                 const response = await fetch('/api/scan', { method: 'POST', body: formData });
                 const data = await response.json();
+                hideLoading();
                 if (!response.ok) { handleError(response.status, data); return; }
                 handleResponse(data);
-            } catch (e) { document.getElementById('results').innerHTML = `<div class="error-box">Ошибка сети: ${e.message}</div>`; }
+            } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">Ошибка сети: ${e.message}</div>`; }
         }
 
         async function scanCode() {
@@ -114,15 +126,13 @@
                 const response = await fetch('/api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        code: code, 
-                        use_ai: document.getElementById('useAi').checked 
-                    })
+                    body: JSON.stringify({ code: code, use_ai: document.getElementById('useAi').checked })
                 });
                 const data = await response.json();
+                hideLoading();
                 if (!response.ok) { handleError(response.status, data); return; }
                 handleResponse(data);
-            } catch (e) { document.getElementById('results').innerHTML = `<div class="error-box">Ошибка сети: ${e.message}</div>`; }
+            } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">Ошибка сети: ${e.message}</div>`; }
         }
 
         function handleResponse(data, isHistorical = false) {
@@ -133,44 +143,101 @@
 
             let html = '';
             if (!isHistorical && data.scans_left !== undefined) {
-                html += `<p style="color: #f9e2af;">Осталось сканирований на сегодня: ${data.scans_left}</p>`;
+                html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin:0;">Результаты</h2>
+                            <span class="badge" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main);">Осталось сканирований: ${data.scans_left}</span>
+                         </div>`;
             } else if (isHistorical) {
-                html += `<p style="color: #a6adc8; font-size: 14px;">📌 Результаты последнего сканирования (загружено из истории)</p>`;
+                html += `<div style="margin-bottom: 20px; color: var(--text-muted);"><i class="fa-solid fa-clock-rotate-left"></i> Загружены результаты последнего сканирования</div>`;
             }
             
-            errors.forEach(e => {
-                html += `<div class="error-box">🚫 ${e.error}</div>`;
-            });
+            errors.forEach(e => { html += `<div class="error-msg">🚫 ${e.error}</div>`; });
 
-            html += `
-            <div style="margin-top: 15px; margin-bottom: 15px;">
-                <a href="/api/report/pdf" class="btn-report" style="background:#f38ba8;">📄 Скачать PDF</a>
-                <a href="/api/report/json" class="btn-report" style="background:#a6e3a1;">💻 Скачать JSON</a>
-                <a href="/api/report/sarif" class="btn-report" style="background:#89b4fa;">🛡️ Скачать SARIF</a>
-            </div>`;
+            html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <a href="/api/report/pdf" class="btn" style="background: #e11d48;"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                        <a href="/api/report/json" class="btn" style="background: var(--success);"><i class="fa-brands fa-js"></i> JSON</a>
+                        <a href="/api/report/sarif" class="btn" style="background: #3b82f6;"><i class="fa-solid fa-shield"></i> SARIF</a>
+                     </div>`;
 
             if (validFindings.length === 0) {
-                resultsDiv.innerHTML = html + '<p style="color:#a6e3a1; font-size: 18px;">✅ Уязвимостей не найдено!</p>';
+                resultsDiv.innerHTML = html + '<div class="card" style="text-align: center; color: var(--success); font-size: 20px; padding: 40px;"><i class="fa-solid fa-check-circle"></i> Уязвимостей не найдено!</div>';
                 return;
             }
             
-            html += `<h3>Файл: ${data.filename} | Найдено проблем: ${validFindings.length}</h3>`;
-            validFindings.forEach((f, index) => {
-                const isAi = f.rule_id === 'AI_LOGIC_FLAW';
-                const aiColor = isAi ? '#cba6f7' : '#f38ba8';
-                
+                        // Вывод Security Score (только если есть уязвимости)
+            if (validFindings.length > 0 && data.score !== undefined) {
                 html += `
-                <div class="finding ${f.severity} ${isAi ? 'AI_LOGIC_FLAW' : ''}">
-                    <b style="color: ${aiColor};">[${f.severity}] ${f.rule_id}</b> (${f.file || data.filename} : строка ${f.line}) - Вес: <span id="weight-${index}">${f.weight}</span>
-                    <p>${f.message}</p>
-                    <span class="code">${f.code}</span>
-                    <div style="margin-top: 10px;">
-                        <button class="btn-feedback btn-tp" onclick="sendFeedback('${f.rule_id}', true, ${index}, '${f.id}')">✅ Реальная</button>
-                        <button class="btn-feedback btn-fp" onclick="sendFeedback('${f.rule_id}', false, ${index}, '${f.id}')">❌ Ложная</button>
+                <div class="score-container">
+                    <div class="score-circle score-${data.grade}">${data.grade}</div>
+                    <div>
+                        <h3 style="margin: 0; color: var(--text-main);">Оценка безопасности: ${data.score}/100</h3>
+                        <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 14px;">${
+                            data.grade === 'A' ? 'Отличный уровень защиты!' : 
+                            data.grade === 'F' ? 'Критический уровень риска. Требуется немедленное вмешательство.' : 
+                            'Есть проблемы, которые следует исправить.'
+                        }</p>
                     </div>
                 </div>`;
+            }html += `<h3 style="margin-bottom: 20px;">Найдено проблем: <span style="color: var(--danger)">${validFindings.length}</span></h3>`;
+            validFindings.forEach((f, index) => {
+                const isAi = f.rule_id === 'AI_LOGIC_FLAW';
+                const badgeClass = isAi ? 'AI_LOGIC_FLAW' : f.severity;
+                const icon = isAi ? 'fa-robot' : 'fa-triangle-exclamation';
+                
+                html += `
+                <div class="finding ${f.severity}" style="border-left-color: ${isAi ? 'var(--ai-color)' : (f.severity === 'CRITICAL' ? 'var(--danger)' : 'var(--warning)')}">
+                    <div class="finding-header">
+                        <div class="finding-title"><i class="fa-solid ${icon}" style="color: ${isAi ? 'var(--ai-color)' : 'inherit'}"></i> ${f.rule_id}</div>
+                        <span class="badge ${badgeClass}">${f.severity}</span>
+                    </div>
+                    <p style="margin: 10px 0; color: var(--text-main);">${f.message}</p>
+                    <div style="font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-file-code"></i> ${f.file || data.filename} : строка ${f.line}</div>
+                    <div class="code-block">${f.code}</div>
+                                        <div class="finding-actions" style="justify-content: space-between;">
+                        <div>
+                            <button class="btn-feedback btn-tp" onclick="sendFeedback('${f.rule_id}', true, ${index}, '${f.id}')"><i class="fa-solid fa-check"></i> Реальная</button>
+                            <button class="btn-feedback btn-fp" onclick="sendFeedback('${f.rule_id}', false, ${index}, '${f.id}')"><i class="fa-solid fa-xmark"></i> Ложная</button>
+                        </div>
+                        <button class="btn-fix" onclick="generateFix(this, '${encodeURIComponent(f.code)}', '${encodeURIComponent(f.message)}')">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Исправить с AI
+                        </button>
+                    </div>
+                    <div class="fix-container">
+                        <div class="fix-header"><i class="fa-solid fa-robot"></i> AI Предлагает безопасный код:</div>
+                        <div class="code-block-fixed"></div>
+                    </div></div>`;
             });
             resultsDiv.innerHTML = html;
+        }
+
+                async function generateFix(btn, encodedCode, encodedIssue) {
+            const findingDiv = btn.closest('.finding');
+            const fixContainer = findingDiv.querySelector('.fix-container');
+            const codeBlock = fixContainer.querySelector('.code-block-fixed');
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Генерация...';
+            btn.disabled = true;
+            fixContainer.style.display = 'block';
+            codeBlock.innerText = 'Нейросеть анализирует уязвимость и пишет безопасный код...';
+            
+            try {
+                const response = await fetch('/api/fix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: decodeURIComponent(encodedCode), issue: decodeURIComponent(encodedIssue) })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    codeBlock.innerText = data.fixed_code;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Готово';
+                    btn.style.borderColor = 'var(--success)';
+                    btn.style.color = 'var(--success)';
+                } else {
+                    codeBlock.innerText = 'Ошибка AI: ' + (data.error || 'Неизвестно');
+                }
+            } catch (e) {
+                codeBlock.innerText = 'Ошибка сети: ' + e.message;
+            }
         }
 
         async function sendFeedback(ruleId, isTp, index, findingHash) {
@@ -180,15 +247,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ rule_id: ruleId, is_tp: isTp, finding_hash: findingHash })
                 });
-                const data = await response.json();
-                if (data.status === 'success') {
-                    document.getElementById(`weight-${index}`).innerText = data.new_weight;
-                    if (!isTp) {
-                        document.getElementById(`weight-${index}`).closest('.finding').style.display = 'none';
-                    }
+                if (response.ok) {
+                    const btnParent = event.target.closest('.finding-actions');
+                    btnParent.innerHTML = isTp ? '<span style="color:var(--success)"><i class="fa-solid fa-check"></i> Отмечено как реальное</span>' : '<span style="color:var(--danger)"><i class="fa-solid fa-xmark"></i> Скрыто как ложное</span>';
+                    if (!isTp) { btnParent.closest('.finding').style.opacity = '0.5'; }
                 }
-            } catch (e) { console.error("Ошибка", e); }
+            } catch (e) { console.error(e); }
         }
+
+        // Автозагрузка последнего скана
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/last_scan');
+                const data = await response.json();
+                if (data.status === 'success') handleResponse(data, true);
+            } catch (e) {}
+        });
     </script>
 </body>
 </html>

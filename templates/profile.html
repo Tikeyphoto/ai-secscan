@@ -2,58 +2,117 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Мой Профиль - AI-SecScan</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #313244; padding-bottom: 10px; margin-bottom: 20px; }
-        h1 { color: #89b4fa; margin: 0; }
-        .card { background: #313244; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .btn { background: #89b4fa; color: #1e1e2e; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; border: none; cursor: pointer; }
-        .btn-pro { background: #f9e2af; }
-        .btn-back { background: #a6adc8; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #45475a; }
-        th { color: #89b4fa; }
-        .flash { background: #a6e3a1; color: #1e1e2e; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-weight: bold; }
-    </style>
+    <title>Личный кабинет - AI-SecScan</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <nav class="navbar">
+        <div class="logo"><i class="fa-solid fa-shield-halved"></i> AI-SecScan</div>
+        <div class="user-nav">
+            <a href="/" class="btn" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);"><i class="fa-solid fa-arrow-left"></i> На главную</a>
+        </div>
+    </nav>
+
     <div class="container">
-        <div class="header">
-            <h1>👤 Профиль: {{ user['username'] }}</h1>
-            <a href="/" class="btn btn-back">← На главную</a>
-        </div>
         {% with messages = get_flashed_messages() %}
-          {% if messages %}{% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endif %}
+          {% if messages %}{% for message in messages %}<div class="error-msg" style="background: rgba(16, 185, 129, 0.2); color: var(--success); border-color: var(--success);">{{ message }}</div>{% endfor %}{% endif %}
         {% endwith %}
-        <div class="card">
-            <h2>Ваш тариф: <span style="color: {{ '#f9e2af' if user['plan'] == 'pro' else '#a6adc8' }}">{{ (user['plan'] or 'FREE') | upper }}</span></h2>
-            {% if user['plan'] == 'free' %}
-                <p>Дневной лимит: 5 сканирований.</p>
-                <form action="/upgrade" method="POST">
-                    <button type="submit" class="btn btn-pro">⭐ Перейти на Pro (Безлимит)</button>
-                </form>
-            {% else %}
-                <p>У вас неограниченный доступ к сканированиям. Спасибо за поддержку!</p>
-            {% endif %}
-        </div>
-        <div class="card">
-            <h2>История последних сканирований</h2>
-            {% if history %}
-                <table>
-                    <tr><th>Файл</th><th>Дата</th><th>Найдено проблем</th></tr>
-                    {% for scan in history %}
-                    <tr>
-                        <td>{{ scan['filename'] }}</td>
-                        <td>{{ scan['timestamp'] }}</td>
-                        <td>{{ scan['findings_count'] }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            {% else %}
-                <p>Вы еще не загружали файлы.</p>
-            {% endif %}
+
+        <div class="dashboard-grid">
+            <!-- Левая колонка: Профиль и Статистика -->
+            <div>
+                <div class="card">
+                    <div class="profile-header">
+                        <div class="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
+                        <div class="profile-info">
+                            <h2>{{ user['username'] }}</h2>
+                            <p>Участник AI-SecScan</p>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <h4><i class="fa-solid fa-radar"></i> Всего сканов</h4>
+                            <div class="value">{{ stats.total_scans }}</div>
+                        </div>
+                        <div class="stat-box danger">
+                            <h4><i class="fa-solid fa-bug"></i> Найдено уязвимостей</h4>
+                            <div class="value">{{ stats.total_issues }}</div>
+                        </div>
+                    </div>
+
+                    <div class="usage-bar-wrapper" style="margin-bottom: 20px;">
+                        <div class="usage-text">
+                            <span>Использовано сегодня</span>
+                            <span>
+                                {% if user['plan'] == 'pro' %}
+                                    Безлимит
+                                {% else %}
+                                    {{ user['scans_today'] }} / 5
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if user['plan'] == 'free' %}
+                            {% set percent = (user['scans_today'] / 5 * 100) | int %}
+                            {% set color = 'warning' if percent >= 80 else '' %}
+                            <div class="progress-bg">
+                                <div class="progress-fill {{ color }}" style="width: {{ percent }}%;"></div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div style="text-align: center;">
+                        <div style="font-size: 15px; margin-bottom: 15px;">Ваш тариф: 
+                            <span class="badge" style="font-size: 14px; background: {{ 'rgba(245, 158, 11, 0.2)' if user['plan'] == 'pro' else 'var(--bg-base)' }}; color: {{ 'var(--warning)' if user['plan'] == 'pro' else 'var(--text-muted)' }}; border: 1px solid {{ 'var(--warning)' if user['plan'] == 'pro' else 'var(--border)' }};">
+                                {{ (user['plan'] or 'FREE') | upper }}
+                            </span>
+                        </div>
+                        
+                        {% if user['plan'] == 'free' %}
+                            <form action="/upgrade" method="POST" style="margin: 0;">
+                                <button type="submit" class="btn" style="background: var(--warning); color: #000; width: 100%; justify-content: center;"><i class="fa-solid fa-crown"></i> Перейти на Pro (Безлимит)</button>
+                            </form>
+                        {% else %}
+                            <div style="color: var(--success); font-size: 14px;"><i class="fa-solid fa-check-circle"></i> У вас неограниченный доступ</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card" style="text-align: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));">
+                    <h4 style="margin-top: 0;">Готовы проверить новый код?</h4>
+                    <a href="/" class="btn" style="margin-top: 10px;"><i class="fa-solid fa-play"></i> Новое сканирование</a>
+                </div>
+            </div>
+
+            <!-- Правая колонка: История -->
+            <div class="card">
+                <h3 style="margin-top: 0; margin-bottom: 20px;"><i class="fa-solid fa-clock-rotate-left"></i> Последние сканирования</h3>
+                {% if history %}
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Файл</th>
+                                <th>Дата</th>
+                                <th>Проблемы</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for scan in history %}
+                            <tr>
+                                <td style="font-weight: 500;"><i class="fa-solid fa-file-code" style="color: var(--primary);"></i> {{ scan['filename'] }}</td>
+                                <td style="color: var(--text-muted);">{{ scan['timestamp'] }}</td>
+                                <td><span class="badge {{ 'CRITICAL' if scan['findings_count'] > 0 else 'SUCCESS' }}" style="background: transparent;">{{ scan['findings_count'] }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                        <i class="fa-solid fa-folder-open" style="font-size: 40px; margin-bottom: 15px; opacity: 0.5;"></i>
+                        <p>Вы еще не загружали файлы.</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </body>

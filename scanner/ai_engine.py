@@ -30,6 +30,19 @@ class AIEngine:
             chunks.append('\n'.join(lines[i:i+max_lines]))
         return chunks
 
+    def generate_fix(self, code: str, issue: str):
+        prompt = f"""Ты — эксперт по безопасности. Этот код содержит уязвимость: {issue}.
+Перепиши ТОЛЬКО этот фрагмент кода, чтобы исправить уязвимость.
+Верни ТОЛЬКО безопасный код, без markdown-разметки, без объяснений и без комментариев.
+Код:
+{code}"""
+        payload = {"model": self.model_name, "prompt": prompt, "stream": False}
+        try:
+            response = requests.post(self.api_url, json=payload, timeout=100)
+            return response.json().get('response', '').strip().replace('```python', '').replace('```', '')
+        except Exception as e:
+            return f"// Ошибка AI: {e}"
+
     def analyze_code(self, code: str):
         print(f"[AI] Анализ файла. Размер: {len(code)} символов.")
         chunks = self._chunk_code(code)

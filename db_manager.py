@@ -18,37 +18,16 @@ def init_db():
         cursor = conn.cursor()
         
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            username TEXT UNIQUE NOT NULL, 
-            password_hash TEXT NOT NULL, 
-            plan TEXT DEFAULT 'free', 
-            scans_today INTEGER DEFAULT 0, 
-            last_scan_date DATE)''')
-            
+            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, 
+            plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS weights (
-            rule_id TEXT PRIMARY KEY, 
-            weight REAL DEFAULT 1.0, 
-            tp INTEGER DEFAULT 0, 
-            fp INTEGER DEFAULT 0)''')
-            
+            rule_id TEXT PRIMARY KEY, weight REAL DEFAULT 1.0, tp INTEGER DEFAULT 0, fp INTEGER DEFAULT 0)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS scans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            username TEXT, 
-            filename TEXT, 
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, 
-            findings_count INTEGER)''')
-            
+            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, filename TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, findings_count INTEGER)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS scan_reports (
-            username TEXT PRIMARY KEY, 
-            filename TEXT, 
-            findings_json TEXT, 
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
-            
+            username TEXT PRIMARY KEY, filename TEXT, findings_json TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS user_baselines (
-            username TEXT, 
-            finding_hash TEXT, 
-            status TEXT, 
-            PRIMARY KEY(username, finding_hash))''')
+            username TEXT, finding_hash TEXT, status TEXT, PRIMARY KEY(username, finding_hash))''')
         
         conn.commit()
     finally:
@@ -80,7 +59,7 @@ def check_and_increment_limit(username):
         if not user: return False, 0
         
         today = date.today().isoformat()
-        scans_today = user['scans_today']
+        scans_today = user['scans_today'] or 0
         
         if user['last_scan_date'] != today:
             scans_today = 0
@@ -100,6 +79,15 @@ def get_user_scans(username, limit=10):
     conn = get_db()
     try:
         return conn.execute("SELECT filename, timestamp, findings_count FROM scans WHERE username = ? ORDER BY timestamp DESC LIMIT ?", (username, limit)).fetchall()
+    finally:
+        conn.close()
+
+def get_user_stats(username):
+    conn = get_db()
+    try:
+        total_scans = conn.execute("SELECT COUNT(*) FROM scans WHERE username = ?", (username,)).fetchone()[0]
+        total_issues = conn.execute("SELECT SUM(findings_count) FROM scans WHERE username = ?", (username,)).fetchone()[0]
+        return {"total_scans": total_scans, "total_issues": total_issues or 0}
     finally:
         conn.close()
 

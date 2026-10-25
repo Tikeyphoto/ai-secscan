@@ -1,4 +1,4 @@
-import os
+﻿import os
 import zipfile
 import tempfile
 import shutil
@@ -30,9 +30,19 @@ ai_scanner = AIEngine()
 def safe_extract_zip(zip_path, extract_dir):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         for member in zip_ref.infolist():
-            if member.filename.startswith('/') or '..' in member.filename:
-                continue
+            if member.filename.startswith('/') or '..' in member.filename: continue
             zip_ref.extract(member, extract_dir)
+
+def calculate_score(findings):
+    score = 100
+    for f in findings:
+        if "error" in f: continue
+        if f.get('severity') == 'CRITICAL': score -= 25
+        elif f.get('severity') == 'HIGH': score -= 10
+        elif f.get('severity') == 'MEDIUM': score -= 5
+    score = max(0, score)
+    grade = 'A' if score >= 90 else 'B' if score >= 80 else 'C' if score >= 70 else 'D' if score >= 60 else 'F'
+    return score, grade
 
 @app.errorhandler(500)
 def internal_error(error):
@@ -51,7 +61,8 @@ def profile():
     user = db_manager.get_user(session['username'])
     if not user: session.clear(); return redirect(url_for('login'))
     history = db_manager.get_user_scans(session['username'])
-    return render_template('profile.html', user=user, history=history)
+    stats = db_manager.get_user_stats(session['username'])
+    return render_template('profile.html', user=user, history=history, stats=stats)
 
 @app.route('/upgrade', methods=['POST'])
 def upgrade():
@@ -95,7 +106,7 @@ def scan():
     allowed, scans_left = db_manager.check_and_increment_limit(username)
     if not allowed: return jsonify({"error": "Лимит сканирований исчерпан."}), 403
 
-    allowed_exts = ['.py', '.js', '.php', '.java', '.ts', '.env', '.yml', '.yaml', '.json', '.txt', '.cfg', '.ini']
+    allowed_exts = ['.py', '.js', '.php', '.java', '.ts', '.env', '.yml', '.yaml', '.json', '.txt', '.cfg', '.ini', '.xml']
     filename = "manual_input.py"
     user_baselines = db_manager.get_user_baselines(username)
     findings = []
@@ -105,7 +116,6 @@ def scan():
     if 'file' in request.files and request.files['file'].filename.endswith('.zip'):
         file = request.files['file']
         filename = file.filename
-        
         temp_dir = tempfile.mkdtemp()
         zip_path = os.path.join(temp_dir, "project.zip")
         file.save(zip_path)
@@ -121,28 +131,21 @@ def scan():
                     filepath = os.path.join(root, f)
                     rel_path = os.path.relpath(filepath, extract_dir)
                     
-                    # --- SCA АНАЛИЗ (requirements.txt) ---
                     if f == 'requirements.txt':
                         with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
                             sca_findings = sca_scanner.scan_requirements(req_file.read())
-                            for sca_f in sca_findings:
-                                sca_f["file"] = rel_path
+                            for sca_f in sca_findings: sca_f["file"] = rel_path
                             findings.extend(sca_findings)
-                    
-                    # --- АНАЛИЗ КОДА ---
                     elif any(f.endswith(ext) for ext in allowed_exts):
                         with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as code_file:
                             code = code_file.read()
-                            
                         file_findings = scanner.scan_code(code, rel_path, user_baselines)
                         for finding in file_findings:
                             if "error" not in finding: finding["file"] = rel_path
                             findings.append(finding)
-                            
                         if use_ai and ai_files_processed < 2:
                             ai_findings = ai_scanner.analyze_code(code)
-                            for a_f in ai_findings:
-                                a_f["file"] = rel_path
+                            for a_f in ai_findings: a_f["file"] = rel_path
                             findings.extend(ai_findings)
                             ai_files_processed += 1
         finally:
@@ -150,11 +153,10 @@ def scan():
 
     elif 'file' in request.files:
         file = request.files['file']
-        if not any(file.filename.endswith(ext) for ext in allowed_exts):
-            return jsonify({"error": "Разрешены только .py, .js, .php, .java"}), 400
+        is_allowed = any(file.filename.endswith(ext) for ext in allowed_exts) or file.filename.lower() in ['env', 'config', 'credentials', '.env', '.gitignore']
+        if not is_allowed: return jsonify({"error": "Этот тип файлов не поддерживается."}), 400
         filename = file.filename
         code = file.read().decode('utf-8-sig')
-        
         findings = scanner.scan_code(code, filename, user_baselines)
         if use_ai:
             ai_findings = ai_scanner.analyze_code(code)
@@ -170,8 +172,7 @@ def scan():
             findings.extend(ai_findings)
         for f in findings:
             if "error" not in f: f["file"] = filename
-    else:
-        return jsonify({"error": "Не передан код или файл"}), 400
+    else: return jsonify({"error": "Не передан код или файл"}), 400
 
     unique_findings = []
     seen = set()
@@ -189,12 +190,8 @@ def scan():
     if not is_only_syntax_error:
         db_manager.save_scan_report(username, filename, findings)
     
-    return jsonify({
-        "status": "success", 
-        "filename": filename, 
-        "findings": findings, 
-        "scans_left": scans_left
-    })
+            score, grade = calculate_score(findings)
+    return jsonify({"status": "success", "filename": filename, "findings": findings, "scans_left": scans_left, "score": score, "grade": grade})
 
 @app.route('/api/last_scan', methods=['GET'])
 def last_scan():
@@ -217,19 +214,31 @@ def feedback():
 @app.route('/api/report/<format>', methods=['GET'])
 def download_report(format):
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
-    filename, findings = db_manager.get_last_scan_report(session['username'])
+        filename, findings = db_manager.get_last_scan_report(session['username'])
     if not filename: return "Сначала выполните сканирование", 400
+    score, grade = calculate_score(findings)
         
     if format == 'json':
-        report = ReportGenerator.generate_json(findings, filename)
+        report = ReportGenerator.generate_json(findings, filename, score, grade)
         return Response(report, mimetype='application/json', headers={'Content-Disposition': f'attachment;filename=report.json'})
     elif format == 'sarif':
-        report = ReportGenerator.generate_sarif(findings, filename)
+        report = ReportGenerator.generate_sarif(findings, filename, score, grade)
         return Response(report, mimetype='application/json', headers={'Content-Disposition': f'attachment;filename=report.sarif'})
     elif format == 'pdf':
-        pdf_bytes = ReportGenerator.generate_pdf(findings, filename)
+        pdf_bytes = ReportGenerator.generate_pdf(findings, filename, score, grade)
         return Response(pdf_bytes, mimetype='application/pdf', headers={'Content-Disposition': f'attachment;filename=report.pdf'})
     return "Неверный формат", 400
+
+@app.route('/api/fix', methods=['POST'])
+@limiter.limit("5 per minute")
+def ai_fix():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    data = request.get_json()
+    code = data.get('code')
+    issue = data.get('issue')
+    if not code or not issue: return jsonify({"error": "Нет данных"}), 400
+    fixed_code = ai_scanner.generate_fix(code, issue)
+    return jsonify({"status": "success", "fixed_code": fixed_code})
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)
