@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>2FA - AI-SecScan</title>
+    <link rel="stylesheet" href="/static/style.css">
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            document.querySelectorAll('.theme-icon').forEach(icon => {
+                icon.className = theme === 'light' ? 'fa-solid fa-moon theme-icon' : 'fa-solid fa-sun theme-icon';
+            });
+        }
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+    </head>
+<body>
+<button id="theme-btn" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; position: fixed; top: 20px; right: 20px; z-index: 999;"><i class="fa-solid fa-sun theme-icon"></i></button>
+    <div class="auth-wrapper">
+        <div class="auth-box">
+            <h2><i class="fa-solid fa-shield-halved"></i> Двухфакторная аутентификация</h2>
+            <p style="color: var(--text-muted); font-size: 14px;">Введите 6-значный код из приложения Google Authenticator или Authy.</p>
+            {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+            <form method="POST">
+                <input type="text" name="code" placeholder="000000" pattern="\d{6}" maxlength="6" required style="text-align: center; font-size: 24px; letter-spacing: 5px;">
+                <button type="submit" class="btn" style="width: 100%; justify-content: center;">Подтвердить</button>
+            </form>
+            <a href="/logout" class="auth-link">Отмена</a>
+        </div>
+    </div>
+</body>
+</html>

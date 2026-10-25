@@ -2,10 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Личный кабинет - AI-SecScan</title>
+    <title>Dashboard - AI-SecScan</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* Переопределяем стили для страницы профиля, чтобы сделать ее на весь экран */
         body { overflow: hidden; } 
         .navbar { padding: 15px 30px; border-bottom: 1px solid var(--border); }
         .app-container { display: flex; height: calc(100vh - 65px); width: 100%; margin: 0; padding: 0; }
@@ -17,7 +16,6 @@
             .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
             .main-content { padding: 20px; overflow-y: visible; }
         }
-        /* Стили для сканера внутри профиля */
         .ai-switch { display: flex; align-items: center; gap: 12px; background: rgba(168, 85, 247, 0.1); border: 1px solid var(--ai-color); padding: 15px; border-radius: 8px; margin-bottom: 20px; cursor: pointer; }
         .ai-switch input { width: 20px; height: 20px; accent-color: var(--ai-color); cursor: pointer; }
         .ai-switch label { color: var(--ai-color); font-weight: 600; cursor: pointer; font-size: 15px; margin: 0; }
@@ -49,19 +47,52 @@
         .code-block-fixed { background: #000; padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #a6e3a1; overflow-x: auto; border: 1px solid var(--ai-color); box-shadow: 0 0 10px rgba(168, 85, 247, 0.2); }
         .spinner { display: none; width: 40px; height: 40px; border: 4px solid rgba(99, 102, 241, 0.3); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .faq-grid { margin-top: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .faq-item { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; padding: 0; overflow: hidden; transition: all 0.3s ease; }
+        .faq-item[open] { border-color: var(--primary); box-shadow: 0 5px 15px rgba(99, 102, 241, 0.1); }
+        .faq-item summary { padding: 20px 25px; font-size: 16px; font-weight: 600; color: var(--text-main); cursor: pointer; list-style: none; position: relative; display: flex; justify-content: space-between; align-items: center; }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; font-size: 24px; color: var(--primary); font-weight: 400; transition: transform 0.3s; }
+        .faq-item[open] summary::after { content: '−'; transform: rotate(180deg); }
+        .faq-item p { padding: 0 25px 20px 25px; margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; }
     </style>
-</head>
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            document.querySelectorAll('.theme-icon').forEach(icon => {
+                icon.className = theme === 'light' ? 'fa-solid fa-moon theme-icon' : 'fa-solid fa-sun theme-icon';
+            });
+        }
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+    </head>
 <body>
     <nav class="navbar">
         <div class="logo"><i class="fa-solid fa-shield-halved"></i> AI-SecScan</div>
         <div class="user-nav">
-            <a href="/logout" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Выйти</a>
+            <button id="theme-btn" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; margin-right: 15px;"><i class="fa-solid fa-sun theme-icon"></i></button><select onchange="window.location.href='/set_lang/'+this.value" class="lang-select" style="margin-right: 15px;">
+                <option value="en" {% if current_lang == 'en' %}selected{% endif %}>🇬🇧 EN</option>
+                <option value="ru" {% if current_lang == 'ru' %}selected{% endif %}>🇷🇺 RU</option>
+            </select>
+            <a href="/logout" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> {{ t('nav.logout') }}</a>
         </div>
     </nav>
 
     <div class="app-container">
         
-        <!-- ЛЕВОЕ МЕНЮ (SIDEBAR) -->
         <aside class="sidebar card" style="margin: 0; border-radius: 0;">
             <div class="sidebar-header">
                 <div class="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
@@ -72,70 +103,75 @@
             </div>
 
             <nav class="sidebar-nav">
-                <!-- Сканер теперь первая вкладка и открыта по умолчанию -->
-                <button class="nav-btn active" onclick="openTab(event, 'tab-scan')"><i class="fa-solid fa-magnifying-glass"></i> Сканер</button>
-                <button class="nav-btn" onclick="openTab(event, 'tab-dashboard')"><i class="fa-solid fa-chart-pie"></i> Статистика</button>
-                <button class="nav-btn" onclick="openTab(event, 'tab-api')"><i class="fa-solid fa-key"></i> API Ключи</button>
-                <button class="nav-btn" onclick="openTab(event, 'tab-webhooks')"><i class="fa-solid fa-link"></i> Webhooks</button>
-                <button class="nav-btn" onclick="openTab(event, 'tab-rules')"><i class="fa-solid fa-sliders"></i> Мои правила</button>
+                <button class="nav-btn active" onclick="openTab(event, 'tab-scan')"><i class="fa-solid fa-magnifying-glass"></i> {{ t('profile.scanner') }}</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-dashboard')"><i class="fa-solid fa-chart-pie"></i> {{ t('profile.stats') }}</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-api')"><i class="fa-solid fa-key"></i> {{ t('profile.api') }}</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-webhooks')"><i class="fa-solid fa-link"></i> {{ t('profile.webhooks') }}</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-rules')"><i class="fa-solid fa-sliders"></i> {{ t('profile.rules') }}</button>
+                                <button class="nav-btn" onclick="openTab(event, 'tab-billing')"><i class="fa-solid fa-credit-card"></i> {{ t('profile.billing') }}</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-settings')"><i class="fa-solid fa-gear"></i> {{ t('profile.settings') }}</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-faq')"><i class="fa-solid fa-circle-question"></i> {{ t('profile.faq') }}</button>
             </nav>
 
+            
+            <div style="padding: 20px; border-top: 1px solid var(--border); text-align: center; font-size: 12px;">
+                <a href="/terms" style="color: var(--text-muted); text-decoration: none; display: block; margin-bottom: 10px;"><i class="fa-solid fa-file-contract"></i> Условия оферты</a>
+                <span style="color: var(--text-muted);">&copy; 2026 AI-SecScan</span>
+            </div>
             <div style="padding: 20px; margin-top: auto;">
                 {% if user['plan'] == 'free' %}
                     <form action="/upgrade" method="POST">
-                        <button type="submit" class="btn" style="background: var(--warning); color: #000; width: 100%; font-size: 12px; padding: 10px;"><i class="fa-solid fa-crown"></i> Upgrade to Pro</button>
+                        <button type="submit" class="btn" style="background: var(--warning); color: #000; width: 100%; font-size: 12px; padding: 10px;"><i class="fa-solid fa-crown"></i> {{ t('profile.upgrade') }}</button>
                     </form>
                 {% else %}
-                    <div style="font-size: 12px; color: var(--success); text-align: center;"><i class="fa-solid fa-check-circle"></i> Pro активен</div>
+                    <div style="font-size: 12px; color: var(--success); text-align: center;"><i class="fa-solid fa-check-circle"></i> Pro</div>
                 {% endif %}
             </div>
         </aside>
 
-        <!-- ПРАВАЯ ЧАСТЬ (КОНТЕНТ) -->
         <main class="main-content">
             
             {% with messages = get_flashed_messages() %}
               {% if messages %}{% for message in messages %}<div class="error-msg" style="background: rgba(16, 185, 129, 0.2); color: var(--success); border-color: var(--success);">{{ message }}</div>{% endfor %}{% endif %}
             {% endwith %}
 
-            <!-- ВКЛАДКА 1: СКАНЕР -->
+            <!-- 1. СКАНЕР -->
             <div id="tab-scan" class="tab-content active">
-                <h2><i class="fa-solid fa-magnifying-glass"></i> Сканирование кода</h2>
+                <h2><i class="fa-solid fa-magnifying-glass"></i> {{ t('profile.scan_title') }}</h2>
                 
                 <label class="ai-switch" for="useAi" style="margin-top: 20px;">
                     <input type="checkbox" id="useAi">
-                    <label for="useAi"><i class="fa-solid fa-robot"></i> Включить глубокий AI-анализ (LLM)</label>
+                    <label for="useAi"><i class="fa-solid fa-robot"></i> {{ t('profile.ai_toggle') }}</label>
                 </label>
 
                 <div class="drop-zone" id="dropZone">
                     <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <p style="font-size: 18px; font-weight: 600;">Перетащите файл сюда или нажмите для выбора</p>
-                    <p>Поддерживаются: ZIP-архивы, .py, .js, .php, .java, .env, .yml, .json</p>
+                    <p style="font-size: 18px; font-weight: 600;">{{ t('profile.drag_drop') }}</p>
+                    <p>.zip, .py, .js, .php, .java, .env, .yml, .json</p>
                     <div class="file-name" id="fileName"></div>
                     <input type="file" id="fileInput" style="display: none;" accept=".zip,.py,.js,.php,.java,.ts,.env,.yml,.yaml,.json,.txt,.cfg,.ini,.xml">
                 </div>
                 
                 <div style="text-align: center; margin-top: 20px;">
                     <button class="btn" id="scanFileBtn" onclick="scanFile()" disabled style="font-size: 16px; padding: 12px 30px;">
-                        <i class="fa-solid fa-magnifying-glass"></i> Сканировать файл
+                        <i class="fa-solid fa-magnifying-glass"></i> {{ t('profile.github_btn') }}
                     </button>
                 </div>
 
-                                <!-- Блок сканирования GitHub -->
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
-                    <h3><i class="fa-brands fa-github"></i> Сканирование репозитория GitHub</h3>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 10px;">Вставьте ссылку на публичный репозиторий (например, https://github.com/user/repo)</p>
+                    <h3><i class="fa-brands fa-github"></i> {{ t('profile.github_title') }}</h3>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 10px;">{{ t('profile.github_desc') }}</p>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="githubUrl" placeholder="https://github.com/user/repo" style="flex: 1; padding: 12px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
-                        <button class="btn" onclick="scanGitHub()" id="scanGithubBtn"><i class="fa-brands fa-github"></i> Сканировать</button>
+                        <button class="btn" onclick="scanGitHub()" id="scanGithubBtn"><i class="fa-brands fa-github"></i> {{ t('profile.github_btn') }}</button>
                     </div>
                 </div>
 
-                <div style='margin-top: 20px;'>
-                    <p style='margin-top: 0; color: var(--text-muted); font-size: 14px;'>Или вставьте код вручную:</p>
+                <div style="margin-top: 20px;">
+                    <p style="margin-top: 0; color: var(--text-muted); font-size: 14px;">{{ t('profile.or_paste') }}</p>
                     <textarea id="codeInput" placeholder="def my_function():\n    pass" style="width: 100%; height: 150px; background: var(--bg-base); color: #a6e3a1; border: 1px solid var(--border); padding: 15px; font-family: 'JetBrains Mono', monospace; border-radius: 8px; resize: vertical;"></textarea>
                     <div style="text-align: right; margin-top: 10px;">
-                        <button class="btn" onclick="scanCode()"><i class="fa-solid fa-code"></i> Сканировать текст</button>
+                        <button class="btn" onclick="scanCode()"><i class="fa-solid fa-code"></i> {{ t('profile.btn_scan') }}</button>
                     </div>
                 </div>
 
@@ -143,25 +179,25 @@
                 <div id="results" style="margin-top: 20px;"></div>
             </div>
 
-            <!-- ВКЛАДКА 2: ДАШБОРД -->
+            <!-- 2. СТАТИСТИКА -->
             <div id="tab-dashboard" class="tab-content">
-                <h2><i class="fa-solid fa-chart-pie"></i> Обзор</h2>
+                <h2><i class="fa-solid fa-chart-pie"></i> {{ t('profile.overview') }}</h2>
                 
                 <div class="stats-grid" style="margin-top: 20px;">
                     <div class="stat-box">
-                        <h4><i class="fa-solid fa-radar"></i> Всего сканов</h4>
+                        <h4><i class="fa-solid fa-radar"></i> {{ t('profile.total_scans') }}</h4>
                         <div class="value">{{ stats.total_scans }}</div>
                     </div>
                     <div class="stat-box danger">
-                        <h4><i class="fa-solid fa-bug"></i> Найдено уязвимостей</h4>
+                        <h4><i class="fa-solid fa-bug"></i> {{ t('profile.vulns_found') }}</h4>
                         <div class="value">{{ stats.total_issues }}</div>
                     </div>
                 </div>
 
                 <div class="usage-bar-wrapper" style="margin-bottom: 30px;">
                     <div class="usage-text">
-                        <span>Использовано сегодня</span>
-                        <span>{% if user['plan'] == 'pro' %}Безлимит{% else %}{{ user['scans_today'] }} / 5{% endif %}</span>
+                        <span>{{ t('profile.used_today') }}</span>
+                        <span>{% if user['plan'] == 'pro' %}{{ t('profile.unlimited') }}{% else %}{{ user['scans_today'] }} / 5{% endif %}</span>
                     </div>
                     {% if user['plan'] == 'free' %}
                         {% set percent = (user['scans_today'] / 5 * 100) | int %}
@@ -172,10 +208,10 @@
                     {% endif %}
                 </div>
 
-                <h3><i class="fa-solid fa-clock-rotate-left"></i> Последние сканирования</h3>
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> {{ t('profile.last_scans') }}</h3>
                 {% if history %}
                     <table class="history-table">
-                        <thead><tr><th>Файл</th><th>Дата</th><th>Проблемы</th></tr></thead>
+                        <thead><tr><th>{{ t('profile.table_file') }}</th><th>{{ t('profile.table_date') }}</th><th>{{ t('profile.table_issues') }}</th></tr></thead>
                         <tbody>
                             {% for scan in history %}
                             <tr>
@@ -187,18 +223,18 @@
                         </tbody>
                     </table>
                 {% else %}
-                    <p style="color: var(--text-muted);">Вы еще не загружали файлы.</p>
+                    <p style="color: var(--text-muted);">{{ t('profile.no_issues') }}</p>
                 {% endif %}
             </div>
 
-            <!-- ВКЛАДКА 3: API КЛЮЧИ -->
+            <!-- 3. API КЛЮЧИ -->
             <div id="tab-api" class="tab-content">
-                <h2><i class="fa-solid fa-key"></i> API & CI/CD</h2>
-                <p style="color: var(--text-muted);">Управляйте ключами доступа к API для автоматизации сканирования.</p>
+                <h2><i class="fa-solid fa-key"></i> {{ t('profile.api_title') }}</h2>
+                <p style="color: var(--text-muted);">{{ t('profile.api_desc') }}</p>
                 
                 {% if user['plan'] == 'free' %}
                     <div class="error-msg" style="background: rgba(245, 158, 11, 0.1); border-color: var(--warning); color: var(--warning); margin-top: 20px;">
-                        <i class="fa-solid fa-lock"></i> API-доступ отключен на тарифе Free. Перейдите на Pro.
+                        <i class="fa-solid fa-lock"></i> {{ t('profile.api_lock_msg') }}
                     </div>
                 {% else %}
                     <div style="margin-top: 20px;">
@@ -211,44 +247,44 @@
                             <button class="btn-delete" onclick="deleteKey({{ key['id'] }})"><i class="fa-solid fa-trash"></i></button>
                         </div>
                         {% else %}
-                        <p style="color: var(--text-muted); font-size: 14px;">У вас пока нет API-ключей.</p>
+                        <p style="color: var(--text-muted); font-size: 14px;">{{ t('profile.api_no_keys') }}</p>
                         {% endfor %}
                     </div>
 
                     {% set limit = 999 if user['plan'] == 'enterprise' else (5 if user['plan'] == 'team' else 1) %}
                     {% if user_api_keys|length < limit %}
                     <div style="display: flex; gap: 10px; margin-top: 20px; max-width: 600px;">
-                        <input type="text" id="keyNameInput" placeholder="Название (например, GitHub Actions)" style="flex: 1; padding: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
-                        <button class="btn" onclick="generateKey()"><i class="fa-solid fa-plus"></i> Создать ключ</button>
+                        <input type="text" id="keyNameInput" placeholder="{{ t('profile.api_key_placeholder') }}" style="flex: 1; padding: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                        <button class="btn" onclick="generateKey()"><i class="fa-solid fa-plus"></i> {{ t('profile.api_btn_create') }}</button>
                     </div>
                     {% else %}
-                    <p style="color: var(--warning); font-size: 14px; margin-top: 15px;"><i class="fa-solid fa-circle-info"></i> Достигнут лимит ключей ({{ limit }}).</p>
+                    <p style="color: var(--warning); font-size: 14px; margin-top: 15px;"><i class="fa-solid fa-circle-info"></i> {{ t('profile.api_limit_msg') }} ({{ limit }}).</p>
                     {% endif %}
                 {% endif %}
 
                 <div style="margin-top: 20px; background: #000; padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-muted); max-width: 800px;">
                     <span style="color: #89b4fa;">curl</span> -X POST http://127.0.0.1:8080/api/v1/scan \<br>
-                    &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Authorization: Bearer ВАШ_КЛЮЧ"</span> \<br>
+                    &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Authorization: Bearer YOUR_KEY"</span> \<br>
                     &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Content-Type: application/json"</span> \<br>
                     &nbsp;&nbsp;-d <span style="color: #f9e2af;">'{"code": "eval(1)", "filename": "test.py"}'</span>
                 </div>
             </div>
 
-            <!-- ВКЛАДКА 4: WEBHOOKS -->
+            <!-- 4. WEBHOOKS -->
             <div id="tab-webhooks" class="tab-content">
-                <h2><i class="fa-solid fa-link"></i> Интеграции (Webhooks)</h2>
-                <p style="color: var(--text-muted);">Настройте отправку уязвимостей в Jira, Slack или Discord.</p>
+                <h2><i class="fa-solid fa-link"></i> {{ t('profile.webhook_title') }}</h2>
+                <p style="color: var(--text-muted);">{{ t('profile.webhook_desc') }}</p>
                 
                 <div style="display: flex; gap: 10px; align-items: center; margin-top: 20px; max-width: 800px;">
                     <input type="text" id="webhookInput" value="{{ user['webhook_url'] or '' }}" placeholder="https://your-jira.com/webhook/..." style="flex: 1; padding: 12px; background: var(--bg-base); border: 1px solid var(--border); color: #a6e3a1; border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
-                    <button class="btn" onclick="saveWebhook()"><i class="fa-solid fa-save"></i> Сохранить</button>
+                    <button class="btn" onclick="saveWebhook()"><i class="fa-solid fa-save"></i> {{ t('profile.btn_save') }}</button>
                 </div>
             </div>
 
-            <!-- ВКЛАДКА 5: ПРАВИЛА -->
+            <!-- 5. ПРАВИЛА -->
             <div id="tab-rules" class="tab-content">
-                <h2><i class="fa-solid fa-sliders"></i> Пользовательские правила</h2>
-                <p style="color: var(--text-muted);">Добавьте Regex для поиска специфичных уязвимостей вашей компании.</p>
+                <h2><i class="fa-solid fa-sliders"></i> {{ t('profile.rules_title') }}</h2>
+                <p style="color: var(--text-muted);">{{ t('profile.rules_desc') }}</p>
                 
                 <div class="rules-list" style="margin-top: 20px; max-width: 800px;">
                     {% for rule in custom_rules %}
@@ -260,35 +296,187 @@
                         <button class="btn-delete" onclick="deleteRule({{ rule['id'] }})"><i class="fa-solid fa-trash"></i></button>
                     </div>
                     {% else %}
-                    <p style="color: var(--text-muted); font-size: 14px;">У вас пока нет кастомных правил.</p>
+                    <p style="color: var(--text-muted); font-size: 14px;">{{ t('profile.rules_no_rules') }}</p>
                     {% endfor %}
                 </div>
 
                 <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px; max-width: 800px;">
-                    <h4>Добавить новое правило</h4>
+                    <h4>{{ t('profile.rules_add_title') }}</h4>
                     <div class="rule-form" style="grid-template-columns: 1fr 1fr;">
                         <div>
-                            <label style="font-size:12px; color:var(--text-muted);">Название (Rule ID)</label>
+                            <label style="font-size:12px; color:var(--text-muted);">{{ t('profile.rules_form_id') }}</label>
                             <input type="text" id="ruleId" placeholder="INTERNAL_KEY_LEAK">
                         </div>
                         <div>
-                            <label style="font-size:12px; color:var(--text-muted);">Уровень опасности</label>
+                            <label style="font-size:12px; color:var(--text-muted);">{{ t('profile.rules_form_sev') }}</label>
                             <select id="ruleSeverity">
-                                <option value="HIGH">HIGH (Высокий)</option>
-                                <option value="CRITICAL">CRITICAL (Критический)</option>
-                                <option value="MEDIUM">MEDIUM (Средний)</option>
+                                <option value="HIGH">{{ t('profile.rules_sev_high') }}</option>
+                                <option value="CRITICAL">{{ t('profile.rules_sev_crit') }}</option>
+                                <option value="MEDIUM">{{ t('profile.rules_sev_med') }}</option>
                             </select>
                         </div>
                         <div style="grid-column: 1 / -1;">
-                            <label style="font-size:12px; color:var(--text-muted);">Регулярное выражение (Regex)</label>
+                            <label style="font-size:12px; color:var(--text-muted);">{{ t('profile.rules_form_regex') }}</label>
                             <input type="text" id="rulePattern" placeholder="api_key=sk_live_...">
                         </div>
                         <div style="grid-column: 1 / -1;">
-                            <label style="font-size:12px; color:var(--text-muted);">Описание</label>
-                            <input type="text" id="ruleMessage" placeholder="Найден внутренний API-ключ">
+                            <label style="font-size:12px; color:var(--text-muted);">{{ t('profile.rules_form_msg') }}</label>
+                            <input type="text" id="ruleMessage" placeholder="Internal API key found">
                         </div>
                     </div>
-                    <button class="btn" onclick="addRule()" style="margin-top: 15px;"><i class="fa-solid fa-plus"></i> Добавить правило</button>
+                    <button class="btn" onclick="addRule()" style="margin-top: 15px;"><i class="fa-solid fa-plus"></i> {{ t('profile.rules_btn_add') }}</button>
+                </div>
+            </div>
+
+                        <!-- 6. ПОДПИСКА (НОВАЯ) -->
+            <div id="tab-billing" class="tab-content">
+                <h2><i class="fa-solid fa-credit-card"></i> {{ t('profile.billing') }}</h2>
+                <p style="color: var(--text-muted);">{{ t('profile.billing_title') }}: <span class="badge" style="background: var(--primary); color: white; font-size: 14px;">{{ user['plan'] | upper }}</span></p>
+                
+                <div class="pricing-grid-4" style="margin-top: 30px;">
+                    <!-- Free -->
+                    <div class="pricing-card {% if user['plan'] == 'free' %}popular{% endif %}" style="padding: 20px;">
+                        {% if user['plan'] == 'free' %}<div class="popular-badge">{{ t('profile.billing_current') }}</div>{% endif %}
+                        <h3>Free</h3>
+                        <div class="price">0 <span>BYN</span></div>
+                        <ul class="pricing-features">
+                            <li><i class="fa-solid fa-check"></i> 5 scans / day</li>
+                            <li><i class="fa-solid fa-check"></i> SAST</li>
+                        </ul>
+                        {% if user['plan'] != 'free' %}
+                            <button class="btn-pricing outline" onclick="changePlan('free')">{{ t('profile.billing_btn') }}</button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Pro -->
+                    <div class="pricing-card {% if user['plan'] == 'pro' %}popular{% endif %}" style="padding: 20px;">
+                        {% if user['plan'] == 'pro' %}<div class="popular-badge">{{ t('profile.billing_current') }}</div>{% endif %}
+                        <h3>Pro</h3>
+                        <div class="price">49 <span>BYN</span></div>
+                        <ul class="pricing-features">
+                            <li><i class="fa-solid fa-check"></i> Unlimited scans</li>
+                            <li><i class="fa-solid fa-check"></i> AI Autofix</li>
+                        </ul>
+                        {% if user['plan'] != 'pro' %}
+                            <button class="btn-pricing primary" onclick="changePlan('pro')">{{ t('profile.billing_btn') }}</button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Startup -->
+                    <div class="pricing-card {% if user['plan'] == 'startup' %}popular{% endif %}" style="padding: 20px; border-color: #a6e3a1;">
+                        {% if user['plan'] == 'startup' %}<div class="popular-badge" style="background: #a6e3a1; color: #000;">{{ t('profile.billing_current') }}</div>{% endif %}
+                        <h3>Startup</h3>
+                        <div class="price">99 <span>BYN</span></div>
+                        <ul class="pricing-features">
+                            <li><i class="fa-solid fa-check"></i> Up to 3 users</li>
+                            <li><i class="fa-solid fa-check"></i> 3 API keys</li>
+                        </ul>
+                        {% if user['plan'] != 'startup' %}
+                            <button class="btn-pricing outline" style="border-color: #a6e3a1; color: #a6e3a1;" onclick="changePlan('startup')">{{ t('profile.billing_btn') }}</button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Team -->
+                    <div class="pricing-card {% if user['plan'] == 'team' %}popular{% endif %}" style="padding: 20px; border-color: #f9e2af;">
+                        {% if user['plan'] == 'team' %}<div class="popular-badge" style="background: #f9e2af; color: #000;">{{ t('profile.billing_current') }}</div>{% endif %}
+                        <h3>Team</h3>
+                        <div class="price">149 <span>BYN</span></div>
+                        <ul class="pricing-features">
+                            <li><i class="fa-solid fa-check"></i> Up to 5 users</li>
+                            <li><i class="fa-solid fa-check"></i> Webhooks</li>
+                        </ul>
+                        {% if user['plan'] != 'team' %}
+                            <button class="btn-pricing outline" style="border-color: #f9e2af; color: #f9e2af;" onclick="changePlan('team')">{{ t('profile.billing_btn') }}</button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Enterprise -->
+                <div class="card" style="margin-top: 30px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(99, 102, 241, 0.1)); border-color: var(--ai-color); text-align: center;">
+                    <h3 style="margin-top: 0; color: var(--ai-color);">Enterprise</h3>
+                    <p style="color: var(--text-muted);">Для банков и крупных корпораций. Развертывание On-Premise.</p>
+                    <a href="mailto:your_email@example.com" class="btn" style="background: var(--ai-color);">{{ t('profile.billing_contact') }}</a>
+                </div>
+            </div>
+
+            <!-- 7. НАСТРОЙКИ -->
+            <div id="tab-settings" class="tab-content">
+                <h2><i class="fa-solid fa-gear"></i> {{ t('profile.settings') }}</h2>
+                
+                <div class="card" style="margin-top: 20px; max-width: 600px;">
+                    <h3><i class="fa-solid fa-envelope"></i> {{ t('profile.settings_email') }}</h3>
+                    <p style="color: var(--text-muted); font-size: 14px;">{{ t('profile.settings_email_desc') }}: <b>{{ user['email'] }}</b></p>
+                    <input type="email" id="newEmail" placeholder="{{ t('profile.settings_email_new') }}" style="width: 100%; padding: 10px; margin-bottom: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                    <input type="password" id="emailPassword" placeholder="{{ t('profile.settings_pwd_curr') }}" style="width: 100%; padding: 10px; margin-bottom: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                    <button class="btn" onclick="updateEmail()">{{ t('profile.settings_btn_save') }}</button>
+                </div>
+
+                <div class="card" style="margin-top: 20px; max-width: 600px;">
+                    <h3><i class="fa-solid fa-lock"></i> {{ t('profile.settings_pwd') }}</h3>
+                    <input type="password" id="currentPwd" placeholder="{{ t('profile.settings_pwd_curr') }}" style="width: 100%; padding: 10px; margin-bottom: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                    <input type="password" id="newPwd" placeholder="{{ t('profile.settings_pwd_new') }}" style="width: 100%; padding: 10px; margin-bottom: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                    <button class="btn" onclick="updatePassword()">{{ t('profile.settings_btn_pwd') }}</button>
+                </div>
+
+                <div class="card" style="margin-top: 20px; max-width: 600px; background: rgba(168, 85, 247, 0.05); border-color: var(--ai-color);">
+                    <h3><i class="fa-solid fa-shield-halved" style="color: var(--ai-color);"></i> {{ t('profile.settings_2fa') }}</h3>
+                    {% if user['totp_secret'] %}
+                        <p style="color: var(--success);"><i class="fa-solid fa-check-circle"></i> {{ t('profile.settings_2fa_on') }}</p>
+                        <input type="password" id="disable2faPwd" placeholder="{{ t('profile.settings_pwd_curr') }}" style="width: 100%; padding: 10px; margin-bottom: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                        <button class="btn" style="background: var(--danger);" onclick="disable2FA()">{{ t('profile.settings_2fa_disable') }}</button>
+                    {% else %}
+                        <p style="color: var(--text-muted);">{{ t('profile.settings_2fa_off') }}</p>
+                        <button class="btn" onclick="setup2FA()" style="background: var(--ai-color);"><i class="fa-solid fa-qrcode"></i> {{ t('profile.settings_2fa_enable') }}</button>
+                        <div id="qrContainer" style="display:none; margin-top: 20px; text-align: center;">
+                            <p>{{ t('profile.settings_2fa_scan') }}</p>
+                            <img id="qrImage" src="" style="width: 200px; height: 200px; border-radius: 8px;">
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 7. FAQ -->
+            <div id="tab-faq" class="tab-content">
+                <h2><i class="fa-solid fa-circle-question"></i> {{ t('landing.faq.title') }}</h2>
+                
+                <div class="faq-grid">
+                    <details class="faq-item">
+                        <summary>{{ t('landing.faq.q1') }}</summary>
+                        <p>{{ t('landing.faq.a1') }}</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>{{ t('landing.faq.q2') }}</summary>
+                        <p>{{ t('landing.faq.a2') }}</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>{{ t('landing.faq.q3') }}</summary>
+                        <p>{{ t('landing.faq.a3') }}</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>{{ t('landing.faq.q4') }}</summary>
+                        <p>{{ t('landing.faq.a4') }}</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>{{ t('landing.faq.q5') }}</summary>
+                        <p>{{ t('landing.faq.a5') }}</p>
+                    </details>
+                    <details class="faq-item">
+                        <summary>{{ t('landing.faq.q6') }}</summary>
+                        <p>{{ t('landing.faq.a6') }}</p>
+                    </details>
+                </div>
+
+                <div class="card" style="margin-top: 40px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1)); border-color: var(--primary); text-align: center;">
+                    <h3 style="margin-top: 0;"><i class="fa-brands fa-telegram"></i> {{ t('profile.tg_title') }}</h3>
+                    <p style="color: var(--text-muted);">{{ t('profile.tg_desc') }}</p>
+                    <div style="display: flex; justify-content: center; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+                        <a href="https://t.me/AI_SecScan" target="_blank" class="btn" style="background: #0088cc; font-size: 15px; padding: 12px 25px;">
+                            <i class="fa-brands fa-telegram"></i> {{ t('profile.tg_news') }}
+                        </a>
+                        <a href="https://t.me/Ai_SecScan_faq" target="_blank" class="btn" style="background: #229ED9; font-size: 15px; padding: 12px 25px;">
+                            <i class="fa-solid fa-comments"></i> {{ t('profile.tg_chat') }}
+                        </a>
+                    </div>
                 </div>
             </div>
 
@@ -296,7 +484,15 @@
     </div>
 
     <script>
-        // --- ВКЛАДКИ ---
+        const i18n = {
+            scans_left: "{{ t('js.scans_left') }}", btn_pdf: "{{ t('js.btn_pdf') }}", btn_json: "{{ t('js.btn_json') }}", btn_sarif: "{{ t('js.btn_sarif') }}",
+            btn_real: "{{ t('js.btn_real') }}", btn_false: "{{ t('js.btn_false') }}", btn_jira: "{{ t('js.btn_jira') }}", btn_ai_fix: "{{ t('js.btn_ai_fix') }}",
+            ai_thinking: "{{ t('js.ai_thinking') }}", ai_done: "{{ t('js.ai_done') }}", ai_error: "{{ t('js.ai_error') }}",
+            confirm_jira: "{{ t('js.confirm_jira') }}", confirm_delete_key: "{{ t('js.confirm_delete_key') }}", confirm_delete_rule: "{{ t('js.confirm_delete_rule') }}",
+            webhook_saved: "{{ t('js.webhook_saved') }}", enter_regex: "{{ t('js.enter_regex') }}", no_issues: "{{ t('profile.no_issues') }}",
+            issues_found: "{{ t('profile.issues_found') }}", score: "{{ t('profile.score') }}"
+        };
+
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
             tabcontent = document.getElementsByClassName("tab-content");
@@ -313,7 +509,6 @@
             evt.currentTarget.classList.add("active");
         }
 
-        // --- ЛОГИКА СКАНЕРА ---
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const fileName = document.getElementById('fileName');
@@ -336,7 +531,7 @@
 
         function updateFileName() {
             if (fileInput.files.length > 0) {
-                fileName.innerHTML = `<i class="fa-solid fa-file-code"></i> Выбран файл: ${fileInput.files[0].name}`;
+                fileName.innerHTML = `<i class="fa-solid fa-file-code"></i> ${fileInput.files[0].name}`;
                 scanFileBtn.disabled = false;
             } else {
                 fileName.innerHTML = '';
@@ -344,31 +539,25 @@
             }
         }
 
-        function showLoading() {
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('results').innerHTML = '';
-        }
-
+        function showLoading() { document.getElementById('loader').style.display = 'block'; document.getElementById('results').innerHTML = ''; }
         function hideLoading() { document.getElementById('loader').style.display = 'none'; }
 
         function handleError(status, data) {
             hideLoading();
             const resultsDiv = document.getElementById('results');
             let errorMsg = data.error || `HTTP ${status}`;
-            let actionHtml = status === 403 ? `<br><br><a href="/profile" style="color: white;">Перейти в профиль, чтобы сменить тариф →</a>` : '';
-            resultsDiv.innerHTML = `<div class="error-msg" style="font-size: 16px; padding: 20px;">⚠️ ${errorMsg} ${actionHtml}</div>`;
+            resultsDiv.innerHTML = `<div class="error-msg" style="font-size: 16px; padding: 20px;">⚠️ ${errorMsg}</div>`;
         }
 
-                async function scanGitHub() {
+        async function scanGitHub() {
             const repoUrl = document.getElementById('githubUrl').value;
             if (!repoUrl.trim()) return alert("Введите ссылку на репозиторий!");
-            
             const useAi = document.getElementById('useAi').checked;
             const btn = document.getElementById('scanGithubBtn');
             
             showLoading();
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>...';
             
             try {
                 const response = await fetch('/api/scan_github', {
@@ -382,10 +571,10 @@
                 handleResponse(data);
             } catch (e) {
                 hideLoading();
-                document.getElementById('results').innerHTML = `<div class="error-msg">Ошибка сети: ${e.message}</div>`;
+                document.getElementById('results').innerHTML = `<div class="error-msg">${e.message}</div>`;
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa-brands fa-github"></i> Сканировать';
+                btn.innerHTML = '<i class="fa-brands fa-github"></i> {{ t("profile.github_btn") }}';
             }
         }
 
@@ -402,13 +591,12 @@
                 hideLoading();
                 if (!response.ok) { handleError(response.status, data); return; }
                 handleResponse(data);
-            } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">Ошибка сети: ${e.message}</div>`; }
+            } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">${e.message}</div>`; }
         }
 
         async function scanCode() {
             const code = document.getElementById('codeInput').value;
             if (!code.trim()) return alert("Введите код!");
-            
             showLoading();
             try {
                 const response = await fetch('/api/scan', {
@@ -420,53 +608,47 @@
                 hideLoading();
                 if (!response.ok) { handleError(response.status, data); return; }
                 handleResponse(data);
-            } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">Ошибка сети: ${e.message}</div>`; }
+            } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">${e.message}</div>`; }
         }
 
         function handleResponse(data, isHistorical = false) {
             const resultsDiv = document.getElementById('results');
-            
             const errors = data.findings.filter(f => f.error);
             const validFindings = data.findings.filter(f => !f.error && f.weight > 0.0);
 
             let html = '';
             if (!isHistorical && data.scans_left !== undefined) {
                 html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h3 style="margin:0;">Результаты</h3>
-                            <span class="badge" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main);">Осталось сканирований: ${data.scans_left}</span>
+                            <h3 style="margin:0;">${i18n.btn_pdf === 'PDF' ? 'Results' : 'Результаты'}</h3>
+                            <span class="badge" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main);">${i18n.scans_left}: ${data.scans_left}</span>
                          </div>`;
             }
             
             errors.forEach(e => { html += `<div class="error-msg">🚫 ${e.error}</div>`; });
 
             html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                        <a href="/api/report/pdf" class="btn" style="background: #e11d48;"><i class="fa-solid fa-file-pdf"></i> PDF</a>
-                        <a href="/api/report/json" class="btn" style="background: var(--success);"><i class="fa-brands fa-js"></i> JSON</a>
-                        <a href="/api/report/sarif" class="btn" style="background: #3b82f6;"><i class="fa-solid fa-shield"></i> SARIF</a>
+                        <a href="/api/report/pdf" class="btn" style="background: #e11d48;"><i class="fa-solid fa-file-pdf"></i> ${i18n.btn_pdf}</a>
+                        <a href="/api/report/json" class="btn" style="background: var(--success);"><i class="fa-brands fa-js"></i> ${i18n.btn_json}</a>
+                        <a href="/api/report/sarif" class="btn" style="background: #3b82f6;"><i class="fa-solid fa-shield"></i> ${i18n.btn_sarif}</a>
+                        <a href="/api/report/sbom" class="btn" style="background: #f59e0b;"><i class="fa-solid fa-boxes-packing"></i> SBOM</a>
                      </div>`;
 
-            // Оценка
             if (validFindings.length > 0 && data.score !== undefined) {
                 html += `
                 <div class="score-container">
                     <div class="score-circle score-${data.grade}">${data.grade}</div>
                     <div>
-                        <h3 style="margin: 0; color: var(--text-main);">Оценка безопасности: ${data.score}/100</h3>
-                        <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 14px;">${
-                            data.grade === 'A' ? 'Отличный уровень защиты!' : 
-                            data.grade === 'F' ? 'Критический уровень риска.' : 
-                            'Есть проблемы, которые следует исправить.'
-                        }</p>
+                        <h3 style="margin: 0; color: var(--text-main);">${i18n.score}: ${data.score}/100</h3>
                     </div>
                 </div>`;
             }
 
             if (validFindings.length === 0) {
-                resultsDiv.innerHTML = html + '<div class="card" style="text-align: center; color: var(--success); font-size: 20px; padding: 40px;"><i class="fa-solid fa-check-circle"></i> Уязвимостей не найдено!</div>';
+                resultsDiv.innerHTML = html + `<div class="card" style="text-align: center; color: var(--success); font-size: 20px; padding: 40px;"><i class="fa-solid fa-check-circle"></i> ${i18n.no_issues}</div>`;
                 return;
             }
             
-            html += `<h3 style="margin-bottom: 20px;">Найдено проблем: <span style="color: var(--danger)">${validFindings.length}</span></h3>`;
+            html += `<h3 style="margin-bottom: 20px;">${i18n.issues_found}: <span style="color: var(--danger)">${validFindings.length}</span></h3>`;
             validFindings.forEach((f, index) => {
                 const isAi = f.rule_id === 'AI_LOGIC_FLAW';
                 const badgeClass = isAi ? 'AI_LOGIC_FLAW' : f.severity;
@@ -479,25 +661,25 @@
                         <span class="badge ${badgeClass}">${f.severity}</span>
                     </div>
                     <p style="margin: 10px 0; color: var(--text-main);">${f.message}</p>
-                    <div style="font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-file-code"></i> ${f.file || data.filename} : строка ${f.line}</div>
+                    <div style="font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-file-code"></i> ${f.file || data.filename} : ${f.line}</div>
                     <div class="code-block">${f.code}</div>
                     
                     <div class="finding-actions" style="justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
                         <div>
-                            <button class="btn-feedback btn-tp" onclick="sendFeedback('${f.rule_id}', true, ${index}, '${f.id}')"><i class="fa-solid fa-check"></i> Реальная</button>
-                            <button class="btn-feedback btn-fp" onclick="sendFeedback('${f.rule_id}', false, ${index}, '${f.id}')"><i class="fa-solid fa-xmark"></i> Ложная</button>
+                            <button class="btn-feedback btn-tp" onclick="sendFeedback('${f.rule_id}', true, ${index}, '${f.id}')"><i class="fa-solid fa-check"></i> ${i18n.btn_real}</button>
+                            <button class="btn-feedback btn-fp" onclick="sendFeedback('${f.rule_id}', false, ${index}, '${f.id}')"><i class="fa-solid fa-xmark"></i> ${i18n.btn_false}</button>
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <button class="btn-fix" style="border-color: var(--primary); color: var(--primary);" onclick="createTask('${f.rule_id}', '${f.severity}', ${f.line}, '${encodeURIComponent(f.code)}', '${encodeURIComponent(f.message)}', '${f.file || data.filename}')">
-                                <i class="fa-solid fa-share-nodes"></i> В Jira
+                                <i class="fa-solid fa-share-nodes"></i> ${i18n.btn_jira}
                             </button>
                             <button class="btn-fix" onclick="generateFix(this, '${encodeURIComponent(f.code)}', '${encodeURIComponent(f.message)}', '${f.file || data.filename}')">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> AI Autofix
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> ${i18n.btn_ai_fix}
                             </button>
                         </div>
                     </div>
                     <div class="fix-container">
-                        <div class="fix-header"><i class="fa-solid fa-robot"></i> AI Предлагает решение:</div>
+                        <div class="fix-header"><i class="fa-solid fa-robot"></i> AI:</div>
                         <div class="code-block-fixed"></div>
                     </div>
                 </div>`;
@@ -510,10 +692,10 @@
             const fixContainer = findingDiv.querySelector('.fix-container');
             const codeBlock = fixContainer.querySelector('.code-block-fixed');
             
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Генерация...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>...';
             btn.disabled = true;
             fixContainer.style.display = 'block';
-            codeBlock.innerText = "⏳ Нейросеть думает (это может занять 10-20 секунд)...";
+            codeBlock.innerText = i18n.ai_thinking;
             
             try {
                 const response = await fetch('/api/fix', {
@@ -521,7 +703,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code: decodeURIComponent(encodedCode), issue: decodeURIComponent(encodedIssue), file: file })
                 });
-                if (!response.ok) throw new Error("Ошибка сервера");
+                if (!response.ok) throw new Error("Error");
                 
                 codeBlock.innerText = "";
                 const reader = response.body.getReader();
@@ -536,17 +718,17 @@
                     let displayText = fullText.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "");
                     codeBlock.innerText = displayText; 
                 }
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> Готово';
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> ${i18n.ai_done}`;
                 btn.style.borderColor = 'var(--success)';
                 btn.style.color = 'var(--success)';
             } catch (e) {
-                codeBlock.innerText = 'Ошибка сети: ' + e.message;
-                btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Ошибка';
+                codeBlock.innerText = i18n.ai_error + ': ' + e.message;
+                btn.innerHTML = `<i class="fa-solid fa-xmark"></i> ${i18n.ai_error}`;
             }
         }
 
         async function createTask(ruleId, severity, line, code, message, file) {
-            if (!confirm("Отправить эту уязвимость в ваш таск-трекер?")) return;
+            if (!confirm(i18n.confirm_jira)) return;
             try {
                 const response = await fetch('/api/create_task', {
                     method: 'POST',
@@ -554,9 +736,9 @@
                     body: JSON.stringify({ rule_id: ruleId, severity, line, code: decodeURIComponent(code), message: decodeURIComponent(message), file })
                 });
                 const data = await response.json();
-                if (data.error) alert("Ошибка: " + data.error);
+                if (data.error) alert("Error: " + data.error);
                 else alert("✅ " + data.message);
-            } catch (e) { alert("Ошибка сети: " + e.message); }
+            } catch (e) { alert("Error: " + e.message); }
         }
 
         async function sendFeedback(ruleId, isTp, index, findingHash) {
@@ -568,26 +750,72 @@
                 });
                 if (response.ok) {
                     const btnParent = event.target.closest('.finding-actions');
-                    btnParent.innerHTML = isTp ? '<span style="color:var(--success)"><i class="fa-solid fa-check"></i> Отмечено как реальное</span>' : '<span style="color:var(--danger)"><i class="fa-solid fa-xmark"></i> Скрыто как ложное</span>';
+                    btnParent.innerHTML = isTp ? `<span style="color:var(--success)"><i class="fa-solid fa-check"></i> ${i18n.btn_real}</span>` : `<span style="color:var(--danger)"><i class="fa-solid fa-xmark"></i> ${i18n.btn_false}</span>`;
                     if (!isTp) { btnParent.closest('.finding').style.opacity = '0.5'; }
                 }
             } catch (e) { console.error(e); }
         }
 
-        // --- ОСТАЛЬНЫЕ ФУНКЦИИ (API, Webhooks, Rules) ---
-        async function generateKey() {
-            const nameInput = document.getElementById('keyNameInput');
-            const name = nameInput ? nameInput.value : 'My Key';
-            const res = await fetch('/api/generate_key', { 
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name })
+                async function changePlan(plan) {
+            if (!confirm("Сменить тариф на " + plan.toUpperCase() + "?")) return;
+            const res = await fetch('/api/change_plan', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: plan })
             });
+            const data = await res.json();
+            if (data.error) return alert("Ошибка: " + data.error);
+            alert(data.message);
+            location.reload();
+        }
+
+        async function updateEmail() {
+            const email = document.getElementById('newEmail').value;
+            const password = document.getElementById('emailPassword').value;
+            const res = await fetch('/api/update_email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+            const data = await res.json();
+            if (data.error) return alert("Ошибка: " + data.error);
+            alert(data.message);
+            location.reload();
+        }
+
+        async function updatePassword() {
+            const current_password = document.getElementById('currentPwd').value;
+            const new_password = document.getElementById('newPwd').value;
+            const res = await fetch('/api/update_password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ current_password, new_password }) });
+            const data = await res.json();
+            if (data.error) return alert("Ошибка: " + data.error);
+            alert(data.message);
+            location.reload();
+        }
+
+        async function disable2FA() {
+            const password = document.getElementById('disable2faPwd').value;
+            if (!confirm("Отключить 2FA?")) return;
+            const res = await fetch('/api/disable_2fa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
             const data = await res.json();
             if (data.error) return alert("Ошибка: " + data.error);
             location.reload();
         }
 
+        async function setup2FA() {
+            const res = await fetch('/api/setup_2fa', { method: 'POST' });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+            document.getElementById('qrContainer').style.display = 'block';
+            document.getElementById('qrImage').src = 'data:image/png;base64,' + data.qr_code;
+            alert("QR-код сгенерирован! Отсканируйте его и обновите страницу.");
+        }
+
+        async function generateKey() {
+            const nameInput = document.getElementById('keyNameInput');
+            const name = nameInput ? nameInput.value : 'My Key';
+            const res = await fetch('/api/generate_key', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) });
+            const data = await res.json();
+            if (data.error) return alert("Error: " + data.error);
+            location.reload();
+        }
+
         async function deleteKey(id) {
-            if (!confirm("Удалить этот API-ключ?")) return;
+            if (!confirm(i18n.confirm_delete_key)) return;
             await fetch(`/api/delete_key/${id}`, { method: 'DELETE' });
             location.reload();
         }
@@ -595,7 +823,7 @@
         async function saveWebhook() {
             const url = document.getElementById('webhookInput').value;
             const res = await fetch('/api/webhook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
-            if (res.ok) alert("Webhook URL сохранен!");
+            if (res.ok) alert(i18n.webhook_saved);
         }
 
         async function addRule() {
@@ -603,15 +831,15 @@
             const severity = document.getElementById('ruleSeverity').value;
             const pattern = document.getElementById('rulePattern').value;
             const message = document.getElementById('ruleMessage').value;
-            if (!pattern) return alert("Введите регулярное выражение!");
+            if (!pattern) return alert(i18n.enter_regex);
             const res = await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rule_id: ruleId || 'CUSTOM_RULE', severity, pattern, message }) });
             const data = await res.json();
-            if (data.error) return alert("Ошибка: " + data.error);
+            if (data.error) return alert("Error: " + data.error);
             location.reload();
         }
         
         async function deleteRule(id) {
-            if (!confirm("Удалить это правило?")) return;
+            if (!confirm(i18n.confirm_delete_rule)) return;
             await fetch(`/api/rules/${id}`, { method: 'DELETE' });
             location.reload();
         }

@@ -1,4 +1,4 @@
-[
+﻿[
   { "id": "PY_EVAL", "severity": "HIGH", "pattern": "eval", "message": "Использование eval() опасно.", "type": "function_call" },
   { "id": "PY_EXEC", "severity": "HIGH", "pattern": "exec", "message": "Использование exec() опасно.", "type": "function_call" },
   { "id": "PY_OS_SYSTEM", "severity": "CRITICAL", "pattern": "os.system", "message": "Использование os.system() уязвимо к инъекции команд.", "type": "function_call" },
@@ -16,5 +16,10 @@
   { "id": "SECRET_TELEGRAM_BOT", "severity": "HIGH", "pattern": "[0-9]{8,10}:[a-zA-Z0-9_-]{35}", "message": "Обнаружен токен Telegram-бота.", "type": "regex" },
   { "id": "SECRET_STRIPE_KEY", "severity": "CRITICAL", "pattern": "sk_live_[0-9a-zA-Z]{24}", "message": "Обнаружен секретный ключ Stripe (Live).", "type": "regex" },
   { "id": "SECRET_PRIVATE_KEY", "severity": "CRITICAL", "pattern": "-----BEGIN (RSA|OPENSSH|DSA) PRIVATE KEY-----", "message": "Обнаружен приватный ключ SSH/RSA.", "type": "regex" },
-  { "id": "SECRET_GENERIC_PASSWORD", "severity": "HIGH", "pattern": "(password|passwd|pwd|secret|api_key|token|auth)\\s*[:=]\\s*['\"]?([^'\"\\s]+)['\"]?", "message": "Обнаружен захардкоженный пароль или секрет.", "type": "regex", "ignore_case": true }
+  { "id": "SECRET_GENERIC_PASSWORD", "severity": "HIGH", "pattern": "(password|passwd|pwd|secret|api_key|token|auth)\\s*[:=]\\s*['\"]?([^'\"\\s]+)['\"]?", "message": "Обнаружен захардкоженный пароль или секрет.", "type": "regex", "ignore_case": true },
+  
+  { "id": "DOCKER_ROOT_USER", "severity": "HIGH", "pattern": "^USER\\s+root", "message": "Dockerfile запускает контейнер от имени root. Создайте непривилегированного пользователя (USER appuser).", "type": "regex", "ignore_case": true },
+  { "id": "DOCKER_LATEST_TAG", "severity": "MEDIUM", "pattern": "^FROM\\s+.*:latest", "message": "Использование тега 'latest' для базового образа небезопасно. Укажите конкретную версию (например, python:3.11-slim).", "type": "regex", "ignore_case": true },
+  { "id": "DOCKER_EXPOSE_SSH", "severity": "CRITICAL", "pattern": "^EXPOSE\\s+22", "message": "В Dockerfile открыт SSH-порт (22). Это может привести к несанкционированному доступу.", "type": "regex", "ignore_case": true },
+  { "id": "DOCKER_ADD_REMOTE", "severity": "MEDIUM", "pattern": "^ADD\\s+http", "message": "Использование 'ADD' с удаленным URL может быть небезопасным. Используйте 'COPY' для локальных файлов.", "type": "regex", "ignore_case": true }
 ]

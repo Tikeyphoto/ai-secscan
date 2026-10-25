@@ -4,19 +4,27 @@ import zipfile
 import tempfile
 import shutil
 import requests
+import pyotp
+import qrcode
+import io
+import base64
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, Response, stream_with_context
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flasgger import Swagger
 from scanner.engine import SecurityScanner
 from scanner.sca_engine import SCAEngine
 from scanner.ai_engine import AIEngine
 from report_generator import ReportGenerator
+from sbom_generator import SBOMGenerator
 import db_manager
+from translations import TRANSLATIONS
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_dev' 
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+swagger = Swagger(app, template={'info': {'title': 'AI-SecScan API', 'description': 'API для сканирования кода', 'version': '1.0.0'}})
 
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"], storage_uri="memory://")
 
@@ -29,9 +37,17 @@ scanner = SecurityScanner(RULES_FILE)
 sca_scanner = SCAEngine(CVE_FILE)
 ai_scanner = AIEngine()
 
-# Черный список директорий и файлов, которые не нужно сканировать
-IGNORE_DIRS = ['venv', '.venv', 'env', 'site-packages', '__pycache__', 'node_modules', '.git', 'dist', 'build', 'migrations']
-IGNORE_FILES = ['rules.json', 'cve_db.json', 'package-lock.json', 'yarn.lock']
+@app.context_processor
+def inject_translations():
+    lang = session.get('lang', 'en')
+    def t(key):
+        return TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
+    return dict(t=t, current_lang=lang)
+
+@app.route('/set_lang/<lang_code>')
+def set_lang(lang_code):
+    if lang_code in ['ru', 'en']: session['lang'] = lang_code
+    return redirect(request.referrer or url_for('index'))
 
 def safe_extract_zip(zip_path, extract_dir):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -55,11 +71,20 @@ def internal_error(error): return render_template('500.html'), 500
 
 @app.route('/')
 def index():
-    if 'username' not in session: 
-        return render_template('landing.html')
+    if 'username' not in session: return render_template('landing.html')
     return redirect(url_for('profile'))
 
+@app.route('/demo')
+def demo():
+    session['username'] = 'demo_user'
+    return redirect(url_for('profile'))
+
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
 @app.route('/profile')
+
 def profile():
     if 'username' not in session: return redirect(url_for('login'))
     user = db_manager.get_user(session['username'])
@@ -81,10 +106,19 @@ def upgrade():
 def register():
     if request.method == 'POST':
         username = request.form['username']
+        email = request.form['email']
         password = request.form['password']
-        if db_manager.create_user(username, generate_password_hash(password)): return redirect(url_for('login'))
+        if db_manager.create_user(username, generate_password_hash(password), email):
+            verify_link = f"http://127.0.0.1:8080/verify/{username}"
+            print(f"\n[EMAIL] Письмо для {email}:\nПодтвердите аккаунт: {verify_link}\n", flush=True)
+            return render_template('login.html', error="Аккаунт создан! Проверьте логи Docker для ссылки подтверждения.")
         return render_template('register.html', error="Пользователь уже существует")
     return render_template('register.html')
+
+@app.route('/verify/<username>', methods=['GET', 'POST'])
+def verify(username):
+    db_manager.verify_user_email(username)
+    return render_template('login.html', error="Аккаунт успешно подтвержден! Теперь вы можете войти.")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -92,16 +126,96 @@ def login():
         username = request.form['username']
         password = request.form['password']
         user = db_manager.get_user(username)
+        
         if user and check_password_hash(user['password_hash'], password):
+            if not user['is_verified']:
+                return render_template('login.html', error="Пожалуйста, подтвердите email. Ссылка в логах Docker.")
+            
+            if user['totp_secret']:
+                session['pending_2fa_user'] = username
+                return redirect(url_for('verify_2fa'))
+                
             session['username'] = username
             return redirect(url_for('profile'))
+            
         return render_template('login.html', error="Неверный логин или пароль")
     return render_template('login.html')
 
+@app.route('/verify_2fa', methods=['GET', 'POST'])
+def verify_2fa():
+    if 'pending_2fa_user' not in session: return redirect(url_for('login'))
+    if request.method == 'POST':
+        code = request.form['code']
+        user = db_manager.get_user(session['pending_2fa_user'])
+        totp = pyotp.TOTP(user['totp_secret'])
+        if totp.verify(code):
+            session['username'] = session.pop('pending_2fa_user')
+            return redirect(url_for('profile'))
+        return render_template('2fa.html', error="Неверный код. Попробуйте снова.")
+    return render_template('2fa.html')
+
 @app.route('/logout')
 def logout():
-    session.pop('username', None)
+    session.clear()
     return redirect(url_for('index'))
+
+@app.route('/api/setup_2fa', methods=['POST'])
+def setup_2fa():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    user = db_manager.get_user(session['username'])
+    if user['totp_secret']: return jsonify({"error": "2FA уже включена"}), 400
+        
+    secret = pyotp.random_base32()
+    db_manager.update_2fa_secret(session['username'], secret)
+    
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=session['username'], issuer_name="AI-SecScan")
+    img = qrcode.make(uri)
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return jsonify({"status": "success", "qr_code": img_str, "secret": secret})
+
+@app.route('/api/disable_2fa', methods=['POST'])
+def api_disable_2fa():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    data = request.get_json()
+    user = db_manager.get_user(session['username'])
+    if not check_password_hash(user['password_hash'], data.get('password')):
+        return jsonify({"error": "Неверный пароль"}), 403
+    db_manager.disable_2fa(session['username'])
+    return jsonify({"status": "success"})
+
+@app.route('/api/update_email', methods=['POST'])
+def api_update_email():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    data = request.get_json()
+    user = db_manager.get_user(session['username'])
+    if not check_password_hash(user['password_hash'], data.get('password')):
+        return jsonify({"error": "Неверный пароль"}), 403
+    db_manager.update_user_email(session['username'], data.get('email'))
+    return jsonify({"status": "success", "message": "Email обновлен. Подтвердите новый адрес в логах."})
+
+@app.route('/api/update_password', methods=['POST'])
+def api_update_password():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    data = request.get_json()
+    user = db_manager.get_user(session['username'])
+    if not check_password_hash(user['password_hash'], data.get('current_password')):
+        return jsonify({"error": "Неверный текущий пароль"}), 403
+    
+    new_hash = generate_password_hash(data.get('new_password'))
+    db_manager.update_user_password(session['username'], new_hash)
+    return jsonify({"status": "success", "message": "Пароль успешно изменен!"})
+
+@app.route('/api/beta_feedback', methods=['POST'])
+def api_beta_feedback():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    data = request.get_json()
+    msg = data.get('message', '').strip()
+    if not msg: return jsonify({"error": "Текст отзыва не может быть пустым"}), 400
+    db_manager.save_beta_feedback(session['username'], msg)
+    return jsonify({"status": "success", "message": "Отзыв отправлен!"})
 
 def process_scan(username, filename, code, use_ai, user_baselines, custom_rules):
     findings = scanner.scan_code(code, filename, user_baselines, custom_rules)
@@ -142,21 +256,20 @@ def scan():
             
             ai_files_processed = 0
             for root, dirs, files in os.walk(extract_dir):
-                # Игнорируем ненужные папки
-                dirs[:] = [d for d in dirs if d not in IGNORE_DIRS and not d.startswith('.')]
-                
+                dirs[:] = [d for d in dirs if not d.startswith('.')]
                 for f in files:
-                    if f in IGNORE_FILES: continue # Игнорируем служебные файлы
-                    
                     filepath = os.path.join(root, f)
                     rel_path = os.path.relpath(filepath, extract_dir)
                     
                     if f == 'requirements.txt':
                         with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
-                            sca_findings = sca_scanner.scan_requirements(req_file.read())
+                            req_content = req_file.read()
+                            sca_findings = sca_scanner.scan_requirements(req_content)
                             for sca_f in sca_findings: sca_f["file"] = rel_path
                             findings.extend(sca_findings)
-                    elif any(f.endswith(ext) for ext in allowed_exts):
+                            sbom_data = SBOMGenerator.generate_cyclonedx(req_content, filename)
+                            db_manager.save_sbom(username, filename, sbom_data)
+                    elif any(f.endswith(ext) for ext in allowed_exts) or f.lower() == 'dockerfile':
                         with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as code_file:
                             code = code_file.read()
                         file_findings = scanner.scan_code(code, rel_path, user_baselines, custom_rules)
@@ -172,7 +285,7 @@ def scan():
 
     elif 'file' in request.files:
         file = request.files['file']
-        is_allowed = any(file.filename.endswith(ext) for ext in allowed_exts) or file.filename.lower() in ['env', 'config', 'credentials', '.env', '.gitignore']
+        is_allowed = any(file.filename.endswith(ext) for ext in allowed_exts) or file.filename.lower() in ['env', 'config', 'credentials', '.env', '.gitignore', 'dockerfile', 'docker-compose.yml']
         if not is_allowed: return jsonify({"error": "Этот тип файлов не поддерживается."}), 400
         filename = file.filename
         code = file.read().decode('utf-8-sig')
@@ -180,6 +293,7 @@ def scan():
 
     elif request.is_json and 'code' in request.json:
         code = request.json['code']
+        filename = request.json.get('filename', 'manual_input.py')
         findings = process_scan(username, filename, code, use_ai, user_baselines, custom_rules)
     else: return jsonify({"error": "Не передан код или файл"}), 400
 
@@ -255,23 +369,22 @@ def scan_github():
         top_folder = os.listdir(extract_dir)[0]
         
         for root, dirs, files in os.walk(extract_dir):
-            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS and not d.startswith('.')]
-            
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
             for f in files:
-                if f in IGNORE_FILES: continue
-                
                 filepath = os.path.join(root, f)
                 rel_path = os.path.relpath(filepath, extract_dir)
-                
                 if rel_path.startswith(top_folder):
                     rel_path = rel_path[len(top_folder):].lstrip('/\\')
 
                 if f == 'requirements.txt':
                     with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
-                        sca_findings = sca_scanner.scan_requirements(req_file.read())
+                        req_content = req_file.read()
+                        sca_findings = sca_scanner.scan_requirements(req_content)
                         for sca_f in sca_findings: sca_f["file"] = rel_path
                         findings.extend(sca_findings)
-                elif any(f.endswith(ext) for ext in allowed_exts):
+                        sbom_data = SBOMGenerator.generate_cyclonedx(req_content, filename)
+                        db_manager.save_sbom(username, filename, sbom_data)
+                elif any(f.endswith(ext) for ext in allowed_exts) or f.lower() == 'dockerfile':
                     with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as code_file:
                         code = code_file.read()
                     file_findings = scanner.scan_code(code, rel_path, user_baselines, custom_rules)
@@ -415,11 +528,42 @@ def delete_rule(rule_id):
 
 @app.route('/api/v1/scan', methods=['POST'])
 def api_v1_scan():
+    """
+    Сканирование кода через API
+    ---
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: "Bearer <API_KEY>"
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            code:
+              type: string
+              description: "Исходный код для проверки"
+            filename:
+              type: string
+              description: "Имя файла (например, test.py или Dockerfile)"
+    responses:
+      200:
+        description: Успешный скан
+      401:
+        description: Неверный API-ключ
+    """
     auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
+    if not auth_header:
         return jsonify({"error": "Отсутствует заголовок Authorization"}), 401
-    
-    api_key = auth_header.split(" ")[1]
+        
+    parts = auth_header.split(" ")
+    if len(parts) != 2 or parts[0].lower() != 'bearer':
+        return jsonify({"error": "Неверный формат токена. Используйте 'Bearer <API_KEY>'"}), 401
+        
+    api_key = parts[1]
     user = db_manager.get_user_by_api_key(api_key)
     if not user: return jsonify({"error": "Неверный API-ключ"}), 401
     if user['plan'] == 'free': return jsonify({"error": "API доступно только на Pro"}), 403
@@ -445,6 +589,16 @@ def api_v1_scan():
     score, grade = calculate_score(findings)
     return jsonify({"status": "success", "filename": filename, "findings": findings, "score": score, "grade": grade})
 
+@app.route('/api/change_plan', methods=['POST'])
+def api_change_plan():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    data = request.get_json()
+    new_plan = data.get('plan')
+    if new_plan not in ['free', 'pro', 'startup', 'team', 'enterprise']:
+        return jsonify({"error": "Неверный тариф"}), 400
+    db_manager.change_user_plan(session['username'], new_plan)
+    return jsonify({"status": "success", "message": "Тариф успешно изменен!"})
+
 @app.route('/api/report/<format>', methods=['GET'])
 def download_report(format):
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
@@ -452,7 +606,11 @@ def download_report(format):
     if not filename: return "Сначала выполните сканирование", 400
     score, grade = calculate_score(findings)
         
-    if format == 'json':
+    if format == 'sbom':
+        sbom_filename, sbom_json = db_manager.get_last_sbom(session['username'])
+        if not sbom_json: return "SBOM не найден. Загрузите файл requirements.txt для генерации.", 404
+        return Response(sbom_json, mimetype='application/json', headers={'Content-Disposition': f'attachment;filename=sbom.json'})
+    elif format == 'json':
         return Response(ReportGenerator.generate_json(findings, filename, score, grade), mimetype='application/json', headers={'Content-Disposition': f'attachment;filename=report.json'})
     elif format == 'sarif':
         return Response(ReportGenerator.generate_sarif(findings, filename, score, grade), mimetype='application/json', headers={'Content-Disposition': f'attachment;filename=report.sarif'})

@@ -4,14 +4,37 @@
     <meta charset="UTF-8">
     <title>Регистрация - AI-SecScan</title>
     <link rel="stylesheet" href="/static/style.css">
-</head>
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            document.querySelectorAll('.theme-icon').forEach(icon => {
+                icon.className = theme === 'light' ? 'fa-solid fa-moon theme-icon' : 'fa-solid fa-sun theme-icon';
+            });
+        }
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+    </head>
 <body>
+<button id="theme-btn" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; position: fixed; top: 20px; right: 20px; z-index: 999;"><i class="fa-solid fa-sun theme-icon"></i></button>
     <div class="auth-wrapper">
         <div class="auth-box">
             <h2><i class="fa-solid fa-user-plus"></i> Регистрация</h2>
             {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
             <form method="POST">
                 <input type="text" name="username" placeholder="Придумайте логин" required>
+                <input type="email" name="email" placeholder="Ваш Email" required>
                 <input type="password" name="password" placeholder="Придумайте пароль" required>
                 <button type="submit" class="btn" style="width: 100%; justify-content: center;">Создать аккаунт</button>
             </form>

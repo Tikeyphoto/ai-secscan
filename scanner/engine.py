@@ -18,7 +18,11 @@ class SecurityScanner:
         findings = []
         ext = os.path.splitext(filename)[1].lower()
         
+        # Если это Dockerfile (нет расширения или имя Dockerfile)
+        is_dockerfile = filename.lower() == 'dockerfile' or filename.lower().endswith('.dockerfile')
+        
         if ext == '.py':
+            # Для Python используем AST
             try:
                 tree = ast.parse(code)
                 for node in ast.walk(tree):
@@ -33,6 +37,7 @@ class SecurityScanner:
             except SyntaxError as e:
                 findings.append({"error": f"Ошибка синтаксиса Python: {e}"})
         else:
+            # Для JS, PHP, Dockerfile и т.д. используем Regex (построчно)
             lines = code.split('\n')
             for line_num, line in enumerate(lines, 1):
                 for rule in self.rules:
@@ -41,7 +46,7 @@ class SecurityScanner:
                         if re.search(rule["pattern"], line, flags):
                             self._add_finding(findings, rule, code, line_num, user_baselines)
                             
-        # --- Пользовательские правила ---
+        # Пользовательские правила (Custom Rules)
         if custom_rules:
             lines = code.split('\n')
             for line_num, line in enumerate(lines, 1):

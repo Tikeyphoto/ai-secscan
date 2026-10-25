@@ -5,31 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-SecScan - Умная проверка кода</title>
     <link rel="stylesheet" href="/static/style.css">
-</head>
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            document.querySelectorAll('.theme-icon').forEach(icon => {
+                icon.className = theme === 'light' ? 'fa-solid fa-moon theme-icon' : 'fa-solid fa-sun theme-icon';
+            });
+        }
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+    </head>
 <body class="landing-body">
     <nav class="landing-nav">
-        <div class="logo"><i class="fa-solid fa-shield-halved"></i> AI-SecScan</div>
+        <div class="logo" style="display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-shield-halved"></i> AI-SecScan <span style="background: linear-gradient(90deg, #f59e0b, #ef4444); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); animation: pulse 2s infinite;">Beta 0.9</span></div>
         <div class="nav-links">
-            <a href="#features">Возможности</a>
-            <a href="#pricing">Тарифы</a>
-            <a href="#faq">FAQ</a>
-            <a href="/login" class="btn-nav">Войти</a>
-            <a href="/register" class="btn-nav primary">Начать бесплатно</a>
+            <a href="#features">{{ t('nav.features') }}</a>
+            <a href="#pricing">{{ t('nav.pricing') }}</a>
+            <a href="#faq">{{ t('nav.faq') }}</a>
+            
+            <button id="theme-btn" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; margin-right: 15px;"><i class="fa-solid fa-sun theme-icon"></i></button><select onchange="window.location.href='/set_lang/'+this.value" class="lang-select">
+                <option value="en" {% if current_lang == 'en' %}selected{% endif %}>🇬🇧 EN</option>
+                <option value="ru" {% if current_lang == 'ru' %}selected{% endif %}>🇷🇺 RU</option>
+            </select>
+
+            <a href="/login" class="btn-nav">{{ t('nav.login') }}</a>
+            <a href="/register" class="btn-nav primary">{{ t('nav.register') }}</a>
         </div>
     </nav>
 
     <header class="hero">
         <div class="hero-content">
-            <div class="badge-pill"><i class="fa-solid fa-bolt"></i> Работает на базе локальных нейросетей</div>
-            <h1>Найдите уязвимости<br><span class="gradient-text">до того, как их найдут хакеры</span></h1>
-            <p>Статический анализ кода (SAST), поиск утечек секретов и интеллектуальный AI-аудит. Загрузите проект и получите отчет за секунды.</p>
+            <div class="badge-pill"><i class="fa-solid fa-bolt"></i> {{ t('landing.hero.badge') }}</div>
+            <h1>{{ t('landing.hero.title1') }}<br><span class="gradient-text">{{ t('landing.hero.title2') }}</span></h1>
+            <p>{{ t('landing.hero.desc') }}</p>
+            
+            <!-- Новый акцент на локальность -->
+            <div style="display: inline-flex; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; color: var(--success); font-weight: 600;">
+                <i class="fa-solid fa-shield-halved"></i> {{ t('landing.hero.local_badge') }}
+            </div>
+
             <div class="hero-buttons">
-                <a href="/register" class="btn-primary-large">Попробовать бесплатно <i class="fa-solid fa-arrow-right"></i></a>
-                <a href="#features" class="btn-secondary-large">Узнать больше</a>
+                <a href="/demo" class="btn-primary-large" style="background: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); text-decoration: none; margin-right: 15px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;">
+                    <i class="fa-solid fa-gamepad"></i> {{ t('landing.demo_btn') }}
+                </a>
+
+                
+                <a href="#features" class="btn-secondary-large">{{ t('landing.hero.btn_more') }}</a>
             </div>
             <div class="hero-stats">
-                <div class="stat-item"><span>5+</span> Языков</div>
-                <div class="stat-item"><span>10k+</span> CVE в базе</div>
+                <div class="stat-item"><span>5+</span> Langs</div>
+                <div class="stat-item"><span>10k+</span> CVEs</div>
                 <div class="stat-item"><span>100%</span> On-Premise</div>
             </div>
         </div>
@@ -39,135 +76,174 @@
                 <div class="mockup-body">
                     <div class="mockup-line"><span class="k">def</span> <span class="f">process_input</span>(data):</div>
                     <div class="mockup-line indent"><span class="k">return</span> <span class="f">eval</span>(data) <span class="err"><i class="fa-solid fa-circle-exclamation"></i> Critical</span></div>
-                    <div class="mockup-line indent"><span class="ai"><i class="fa-solid fa-robot"></i> AI предлагает: ast.literal_eval(data)</span></div>
+                    <div class="mockup-line indent"><span class="ai"><i class="fa-solid fa-robot"></i> AI suggests: ast.literal_eval(data)</span></div>
                 </div>
             </div>
         </div>
     </header>
 
     <section id="features" class="features-section">
-        <h2 class="section-title fade-in-up">Всё для безопасности в одном месте</h2>
+        <h2 class="section-title fade-in-up">{{ t('landing.feat.title') }}</h2>
         <div class="features-grid">
             <div class="feature-card fade-in-up">
                 <div class="icon-box blue"><i class="fa-solid fa-code"></i></div>
-                <h3>AST-Сканер (SAST)</h3>
-                <p>Умный поиск уязвимостей в коде Python, JS, PHP, Java без выполнения самого кода.</p>
+                <h3>{{ t('landing.feat.f1_title') }}</h3>
+                <p>{{ t('landing.feat.f1_desc') }}</p>
             </div>
             <div class="feature-card fade-in-up" style="transition-delay: 0.1s;">
                 <div class="icon-box purple"><i class="fa-solid fa-robot"></i></div>
-                <h3>AI Автоисправление</h3>
-                <p>Локальная нейросеть не только находит логические ошибки, но и пишет безопасный код.</p>
+                <h3>{{ t('landing.feat.f2_title') }}</h3>
+                <p>{{ t('landing.feat.f2_desc') }}</p>
             </div>
             <div class="feature-card fade-in-up" style="transition-delay: 0.2s;">
                 <div class="icon-box red"><i class="fa-solid fa-key"></i></div>
-                <h3>Поиск секретов</h3>
-                <p>Мгновенное обнаружение ключей AWS, токенов Telegram и паролей в конфигурациях.</p>
+                <h3>{{ t('landing.feat.f3_title') }}</h3>
+                <p>{{ t('landing.feat.f3_desc') }}</p>
             </div>
             <div class="feature-card fade-in-up" style="transition-delay: 0.3s;">
                 <div class="icon-box green"><i class="fa-solid fa-boxes-stacked"></i></div>
-                <h3>Анализ зависимостей</h3>
-                <p>Проверка библиотек (requirements.txt) на наличие известных уязвимостей (CVE).</p>
+                <h3>{{ t('landing.feat.f4_title') }}</h3>
+                <p>{{ t('landing.feat.f4_desc') }}</p>
             </div>
         </div>
     </section>
 
     <section id="pricing" class="pricing-section">
-        <h2 class="section-title fade-in-up">Простые и честные тарифы</h2>
-        <div class="pricing-grid-4">
+        <h2 class="section-title fade-in-up">{{ t('landing.price.title') }}</h2>
+        
+        <!-- Переключатель Месяц/Год -->
+        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 40px;" class="fade-in-up">
+            <span id="label-monthly" style="font-weight: bold; color: var(--text-main);">{{ t('landing.price.monthly') }}</span>
+            <label class="switch">
+                <input type="checkbox" id="billingToggle" onchange="toggleBilling()">
+                <span class="slider round"></span>
+            </label>
+            <span id="label-yearly" style="font-weight: bold; color: var(--text-muted);">{{ t('landing.price.yearly') }} <span style="background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 5px;">{{ t('landing.price.save') }}</span></span>
+        </div>
+
+        <div class="pricing-grid-5">
+            <!-- Free -->
             <div class="pricing-card fade-in-up">
                 <h3>Free</h3>
                 <div class="price">0 <span>BYN</span></div>
-                <p class="pricing-desc">Для знакомства и пет-проектов.</p>
+                <p class="pricing-desc">{{ t('landing.price.free.desc') }}</p>
                 <ul class="pricing-features">
-                    <li><i class="fa-solid fa-check"></i> 5 сканирований в день</li>
-                    <li><i class="fa-solid fa-check"></i> Поиск уязвимостей (SAST)</li>
-                    <li><i class="fa-solid fa-check"></i> Экспорт в JSON</li>
-                    <li class="disabled"><i class="fa-solid fa-xmark"></i> AI Автофикс</li>
-                    <li class="disabled"><i class="fa-solid fa-xmark"></i> Интеграции</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.free.f1') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.free.f2') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.free.f3') }}</li>
+                    <li class="disabled"><i class="fa-solid fa-xmark"></i> {{ t('landing.price.free.f4') }}</li>
+                    <li class="disabled"><i class="fa-solid fa-xmark"></i> {{ t('landing.price.free.f5') }}</li>
                 </ul>
-                <a href="/register" class="btn-pricing outline">Начать</a>
+                <a href="/register" class="btn-pricing outline" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
             </div>
 
+            <!-- Pro -->
             <div class="pricing-card popular fade-in-up" style="transition-delay: 0.1s;">
-                <div class="popular-badge">Для профи</div>
+                <div class="popular-badge">{{ t('landing.price.badge_pro') }}</div>
                 <h3>Pro</h3>
-                <div class="price">49 <span>BYN / мес</span></div>
-                <p class="pricing-desc">Для фрилансеров и одиночных разработчиков.</p>
+                <div class="price">
+                    <span class="price-monthly">49 <span>{{ t('landing.price.pro.price') }}</span></span>
+                    <span class="price-yearly" style="display: none;">490 <span>{{ t('landing.price.pro.price_yearly') }}</span></span>
+                </div>
+                <p class="pricing-desc">{{ t('landing.price.pro.desc') }}</p>
                 <ul class="pricing-features">
-                    <li><i class="fa-solid fa-check"></i> <b>Безлимит</b> сканирований</li>
-                    <li><i class="fa-solid fa-check"></i> AI Анализ и Автофикс</li>
-                    <li><i class="fa-solid fa-check"></i> Отчеты PDF и SARIF</li>
-                    <li><i class="fa-solid fa-check"></i> API-ключи</li>
-                    <li class="disabled"><i class="fa-solid fa-xmark"></i> Общие правила команды</li>
+                    <li><i class="fa-solid fa-check"></i> <b>{{ t('landing.price.pro.f1') }}</b></li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.pro.f2') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.pro.f3') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.pro.f4') }}</li>
+                    <li class="disabled"><i class="fa-solid fa-xmark"></i> {{ t('landing.price.pro.f5') }}</li>
                 </ul>
-                <a href="/register" class="btn-pricing primary">Выбрать Pro</a>
+                <a href="/register" class="btn-pricing primary" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
             </div>
 
-            <div class="pricing-card fade-in-up" style="transition-delay: 0.2s; border-color: #f9e2af;">
-                <div class="popular-badge" style="background: #f9e2af; color: #000;">Для команд</div>
+            <!-- Startup -->
+            <div class="pricing-card fade-in-up" style="transition-delay: 0.2s; border-color: #a6e3a1;">
+                <div class="popular-badge" style="background: #10b981; color: white;">{{ t('landing.price.badge_startup') }}</div>
+                <h3>Startup</h3>
+                <div class="price">
+                    <span class="price-monthly">99 <span>{{ t('landing.price.startup.price') }}</span></span>
+                    <span class="price-yearly" style="display: none;">990 <span>{{ t('landing.price.startup.price_yearly') }}</span></span>
+                </div>
+                <p class="pricing-desc">{{ t('landing.price.startup.desc') }}</p>
+                <ul class="pricing-features">
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.startup.f1') }}</li>
+                    <li><i class="fa-solid fa-check"></i> <b>{{ t('landing.price.startup.f2') }}</b></li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.startup.f3') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.startup.f4') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.startup.f5') }}</li>
+                </ul>
+                <a href="/register" class="btn-pricing outline" style="border-color: #10b981; color: var(--text-main);" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
+            </div>
+
+            <!-- Team -->
+            <div class="pricing-card fade-in-up" style="transition-delay: 0.3s; border-color: #f9e2af;">
+                <div class="popular-badge" style="background: #f59e0b; color: white;">{{ t('landing.price.badge_team') }}</div>
                 <h3>Team</h3>
-                <div class="price">149 <span>BYN / мес</span></div>
-                <p class="pricing-desc">Для небольших команд и стартапов.</p>
+                <div class="price">
+                    <span class="price-monthly">149 <span>{{ t('landing.price.team.price') }}</span></span>
+                    <span class="price-yearly" style="display: none;">1490 <span>{{ t('landing.price.team.price_yearly') }}</span></span>
+                </div>
+                <p class="pricing-desc">{{ t('landing.price.team.desc') }}</p>
                 <ul class="pricing-features">
-                    <li><i class="fa-solid fa-check"></i> Всё из Pro</li>
-                    <li><i class="fa-solid fa-check"></i> До 5 пользователей</li>
-                    <li><i class="fa-solid fa-check"></i> Общие Custom Rules</li>
-                    <li><i class="fa-solid fa-check"></i> Webhooks (Jira/Slack)</li>
-                    <li><i class="fa-solid fa-check"></i> Приоритетная поддержка</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f1') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f2') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f3') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f4') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f5') }}</li>
                 </ul>
-                <a href="/register" class="btn-pricing outline" style="border-color: #f9e2af; color: #f9e2af;">Выбрать Team</a>
+                <a href="/register" class="btn-pricing outline" style="border-color: #f59e0b; color: var(--text-main);" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
             </div>
 
-            <div class="pricing-card fade-in-up" style="transition-delay: 0.3s; background: linear-gradient(180deg, var(--bg-surface), rgba(168, 85, 247, 0.05)); border-color: var(--ai-color);">
-                <div class="popular-badge" style="background: var(--ai-color);">Для банков</div>
+            <!-- Enterprise -->
+            <div class="pricing-card fade-in-up" style="transition-delay: 0.4s; background: linear-gradient(180deg, var(--bg-surface), rgba(168, 85, 247, 0.05)); border-color: var(--ai-color);">
+                <div class="popular-badge" style="background: var(--ai-color);">{{ t('landing.price.badge_ent') }}</div>
                 <h3>Enterprise</h3>
-                <div class="price">Custom</div>
-                <p class="pricing-desc">Для банков и крупных корпораций (On-Premise).</p>
+                <div class="price">{{ t('landing.price.ent.price') }}</div>
+                <p class="pricing-desc">{{ t('landing.price.ent.desc') }}</p>
                 <ul class="pricing-features">
-                    <li><i class="fa-solid fa-check"></i> Всё из Team</li>
-                    <li><i class="fa-solid fa-check"></i> <b>Неограниченно</b> пользователей</li>
-                    <li><i class="fa-solid fa-check"></i> Развертывание на ваших серверах</li>
-                    <li><i class="fa-solid fa-check"></i> Выделенная AI-модель</li>
-                    <li><i class="fa-solid fa-check"></i> SLA и аудит безопасности</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.ent.f1') }}</li>
+                    <li><i class="fa-solid fa-check"></i> <b>{{ t('landing.price.ent.f2') }}</b></li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.ent.f3') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.ent.f4') }}</li>
+                    <li><i class="fa-solid fa-check"></i> {{ t('landing.price.ent.f5') }}</li>
                 </ul>
-                <a href="mailto:contact@ai-secscan.local" class="btn-pricing primary" style="background: var(--ai-color);">Связаться с нами</a>
+                <a href="mailto:contact@ai-secscan.local" class="btn-pricing primary" style="background: var(--ai-color);" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
             </div>
         </div>
     </section>
 
-    <!-- НОВЫЙ БЛОК FAQ -->
     <section id="faq" class="faq-section">
-        <h2 class="section-title fade-in-up">Часто задаваемые вопросы</h2>
+        <h2 class="section-title fade-in-up">{{ t('landing.faq.title') }}</h2>
         <div class="faq-grid fade-in-up">
             <details class="faq-item">
-                <summary>Мой код сохраняется на ваших серверах?</summary>
-                <p>Нет. Мы заботимся о конфиденциальности. Код анализируется в оперативной памяти и удаляется сразу после генерации отчета. Для корпоративных клиентов (Enterprise) мы предлагаем полностью локальное развертывание (On-Premise), где данные вообще не покидают вашу инфраструктуру.</p>
+                <summary>{{ t('landing.faq.q1') }}</summary>
+                <p>{{ t('landing.faq.a1') }}</p>
             </details>
             <details class="faq-item">
-                <summary>Какие языки программирования вы поддерживаете?</summary>
-                <p>Наш AST-сканер на данный момент поддерживает Python, JavaScript, TypeScript, PHP и Java. Мы также анализируем конфигурационные файлы (.env, .json, .yaml) на предмет утечки секретов.</p>
+                <summary>{{ t('landing.faq.q2') }}</summary>
+                <p>{{ t('landing.faq.a2') }}</p>
             </details>
             <details class="faq-item">
-                <summary>Как работает AI Автоисправление?</summary>
-                <p>Мы используем локальную нейросеть (LLM), которая развернута прямо на нашем сервере (или на вашем сервере в Enterprise-версии). Она анализирует контекст уязвимости и предлагает безопасный код в реальном времени. Нейросеть не отправляет код в OpenAI или другие сторонние облака.</p>
+                <summary>{{ t('landing.faq.q3') }}</summary>
+                <p>{{ t('landing.faq.a3') }}</p>
             </details>
             <details class="faq-item">
-                <summary>Нужен ли мне ключ API от ChatGPT?</summary>
-                <p>Нет. Все AI-функции работают на базе open-source моделей (например, Qwen 2.5 Coder), которые работают локально. Вы не платите за токены OpenAI.</p>
+                <summary>{{ t('landing.faq.q4') }}</summary>
+                <p>{{ t('landing.faq.a4') }}</p>
             </details>
             <details class="faq-item">
-                <summary>Чем отличается тариф Team от Pro?</summary>
-                <p>Тариф Pro предназначен для одного разработчика. Тариф Team позволяет добавить до 5 участников, создавать общие кастомные правила (чтобы вся команда искала одинаковые уязвимости) и настраивать интеграции с корпоративными трекерами (Jira).</p>
+                <summary>{{ t('landing.faq.q5') }}</summary>
+                <p>{{ t('landing.faq.a5') }}</p>
             </details>
             <details class="faq-item">
-                <summary>Можно ли интегрировать сканер в мой CI/CD?</summary>
-                <p>Да. В тарифах Pro и выше доступны API-ключи. Вы можете вызывать наш сканер прямо из GitHub Actions, GitLab CI или Jenkins с помощью простого HTTP-запроса.</p>
+                <summary>{{ t('landing.faq.q6') }}</summary>
+                <p>{{ t('landing.faq.a6') }}</p>
             </details>
         </div>
     </section>
 
     <footer class="landing-footer">
-        <p>© 2026 AI-SecScan. Разработано для профессионалов кибербезопасности.</p>
+        <p>{{ t('landing.footer.text') }}</p>
     </footer>
 
     <script>
@@ -180,6 +256,26 @@
             });
         }, { threshold: 0.1 });
         document.querySelectorAll('.fade-in-up').forEach((el) => observer.observe(el));
+
+        function toggleBilling() {
+            const isYearly = document.getElementById('billingToggle').checked;
+            const monthlyElements = document.querySelectorAll('.price-monthly');
+            const yearlyElements = document.querySelectorAll('.price-yearly');
+            const labelMonthly = document.getElementById('label-monthly');
+            const labelYearly = document.getElementById('label-yearly');
+
+            if (isYearly) {
+                monthlyElements.forEach(el => el.style.display = 'none');
+                yearlyElements.forEach(el => el.style.display = 'inline');
+                labelMonthly.style.color = 'var(--text-muted)';
+                labelYearly.style.color = 'var(--text-main)';
+            } else {
+                monthlyElements.forEach(el => el.style.display = 'inline');
+                yearlyElements.forEach(el => el.style.display = 'none');
+                labelMonthly.style.color = 'var(--text-main)';
+                labelYearly.style.color = 'var(--text-muted)';
+            }
+        }
     </script>
 </body>
 </html>

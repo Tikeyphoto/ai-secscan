@@ -20,48 +20,50 @@ def init_db():
         
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE)''')
         
-        # Миграция для webhook_url
         cursor.execute("PRAGMA table_info(users)")
         columns = [info[1] for info in cursor.fetchall()]
+        
+        if 'api_key' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN api_key TEXT")
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_api_key ON users(api_key)")
         if 'webhook_url' not in columns:
             cursor.execute("ALTER TABLE users ADD COLUMN webhook_url TEXT")
+        if 'email' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        if 'is_verified' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 1")
+        if 'totp_secret' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
 
-        # Новая таблица для множественных API ключей
-        cursor.execute('''CREATE TABLE IF NOT EXISTS api_keys (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            api_key TEXT UNIQUE,
-            name TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )''')
-        
-        # Миграция старых ключей из users, если они есть
-        if 'api_key' in columns:
-            cursor.execute("SELECT username, api_key FROM users WHERE api_key IS NOT NULL")
-            old_keys = cursor.fetchall()
-            for row in old_keys:
-                try:
-                    cursor.execute("INSERT INTO api_keys (username, api_key, name) VALUES (?, ?, ?)", (row['username'], row['api_key'], "Migrated Key"))
-                except sqlite3.IntegrityError:
-                    pass # Игнорируем дубликаты
-
+        cursor.execute('''CREATE TABLE IF NOT EXISTS api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, api_key TEXT UNIQUE, name TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS weights (rule_id TEXT PRIMARY KEY, weight REAL DEFAULT 1.0, tp INTEGER DEFAULT 0, fp INTEGER DEFAULT 0)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS scans (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, filename TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, findings_count INTEGER)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS scan_reports (username TEXT PRIMARY KEY, filename TEXT, findings_json TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS user_baselines (username TEXT, finding_hash TEXT, status TEXT, PRIMARY KEY(username, finding_hash))''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS custom_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, rule_id TEXT, severity TEXT, pattern TEXT, message TEXT)''')
         
+        # Таблица для SBOM
+        cursor.execute('''CREATE TABLE IF NOT EXISTS sboms (
+            username TEXT PRIMARY KEY, filename TEXT, sbom_json TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+        
         conn.commit()
     finally:
         conn.close()
 
-def create_user(username, password_hash):
+def create_user(username, password_hash, email):
     conn = get_db()
     try:
-        conn.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+        conn.execute("INSERT INTO users (username, password_hash, email, is_verified, plan) VALUES (?, ?, ?, 0, 'pro')", (username, password_hash, email))
         conn.commit()
         return True
     except sqlite3.IntegrityError: return False
+    finally: conn.close()
+
+def verify_user_email(username):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET is_verified = 1 WHERE username = ?", (username,))
+        conn.commit()
     finally: conn.close()
 
 def get_user(username):
@@ -69,12 +71,40 @@ def get_user(username):
     try: return conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
     finally: conn.close()
 
-# --- API Keys ---
+def update_2fa_secret(username, secret):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET totp_secret = ? WHERE username = ?", (secret, username))
+        conn.commit()
+    finally: conn.close()
+
+def disable_2fa(username):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET totp_secret = NULL WHERE username = ?", (username,))
+        conn.commit()
+    finally: conn.close()
+
+def update_user_email(username, new_email):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET email = ?, is_verified = 0 WHERE username = ?", (new_email, username))
+        conn.commit()
+    finally: conn.close()
+
+def update_user_password(username, new_password_hash):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_password_hash, username))
+        conn.commit()
+    finally: conn.close()
+
 def get_key_limit(plan):
     if plan == 'free': return 0
     if plan == 'pro': return 1
+    if plan == 'startup': return 3
     if plan == 'team': return 5
-    return 999 # Enterprise
+    return 999
 
 def get_user_api_keys(username):
     conn = get_db()
@@ -84,13 +114,10 @@ def get_user_api_keys(username):
 def create_api_key(username, name):
     user = get_user(username)
     limit = get_key_limit(user['plan'])
-    
     conn = get_db()
     try:
         count = conn.execute("SELECT COUNT(*) FROM api_keys WHERE username = ?", (username,)).fetchone()[0]
-        if count >= limit:
-            return None, f"Достигнут лимит ключей для тарифа {user['plan'].upper()} ({limit})"
-            
+        if count >= limit: return None, f"Достигнут лимит ключей для тарифа {user['plan'].upper()} ({limit})"
         new_key = "sec_" + uuid.uuid4().hex
         conn.execute("INSERT INTO api_keys (username, api_key, name) VALUES (?, ?, ?)", (username, new_key, name))
         conn.commit()
@@ -107,13 +134,11 @@ def delete_api_key(key_id, username):
 def get_user_by_api_key(api_key):
     conn = get_db()
     try: 
-        # Ищем владельца ключа
         key_row = conn.execute("SELECT username FROM api_keys WHERE api_key = ?", (api_key,)).fetchone()
         if not key_row: return None
         return conn.execute("SELECT * FROM users WHERE username = ?", (key_row['username'],)).fetchone()
     finally: conn.close()
 
-# --- Остальные функции ---
 def set_webhook(username, url):
     conn = get_db()
     try:
@@ -149,6 +174,14 @@ def get_user_stats(username):
         total_issues = conn.execute("SELECT SUM(findings_count) FROM scans WHERE username = ?", (username,)).fetchone()[0]
         return {"total_scans": total_scans, "total_issues": total_issues or 0}
     finally: conn.close()
+
+def change_user_plan(username, new_plan):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET plan = ? WHERE username = ?", (new_plan, username))
+        conn.commit()
+    finally:
+        conn.close()
 
 def upgrade_user_plan(username):
     conn = get_db()
@@ -227,4 +260,21 @@ def delete_custom_rule(rule_id, username):
     try:
         conn.execute("DELETE FROM custom_rules WHERE id = ? AND username = ?", (rule_id, username))
         conn.commit()
+    finally: conn.close()
+
+def save_sbom(username, filename, sbom_json):
+    conn = get_db()
+    try:
+        conn.execute('''INSERT INTO sboms (username, filename, sbom_json) VALUES (?, ?, ?) 
+            ON CONFLICT(username) DO UPDATE SET filename=excluded.filename, sbom_json=excluded.sbom_json, timestamp=CURRENT_TIMESTAMP''', 
+            (username, filename, sbom_json))
+        conn.commit()
+    finally: conn.close()
+
+def get_last_sbom(username):
+    conn = get_db()
+    try:
+        row = conn.execute("SELECT filename, sbom_json FROM sboms WHERE username = ?", (username,)).fetchone()
+        if row: return row['filename'], row['sbom_json']
+        return None, None
     finally: conn.close()
