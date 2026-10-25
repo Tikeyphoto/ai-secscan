@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <title>2FA - AI-SecScan</title>
@@ -25,7 +25,8 @@
         }
         document.addEventListener('DOMContentLoaded', updateThemeIcon);
     </script>
-    </head>
+        <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
 <body>
 <button id="theme-btn" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; position: fixed; top: 20px; right: 20px; z-index: 999;"><i class="fa-solid fa-sun theme-icon"></i></button>
     <div class="auth-wrapper">

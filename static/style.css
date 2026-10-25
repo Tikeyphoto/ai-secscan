@@ -1,5 +1,5 @@
 ﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+@import url('/static/css/all.min.css');
 
 :root {
     --bg-base: #0f0f13;
@@ -597,4 +597,198 @@ select.lang-select {
 }
 [data-theme="light"] .btn-pricing.outline:hover {
     background: var(--bg-surface-hover) !important;
+}
+
+/* =========================================
+   Mobile Navbar Fixes
+   ========================================= */
+@media (max-width: 600px) {
+    .navbar { 
+        flex-direction: column; 
+        padding: 10px; 
+        gap: 10px;
+        height: auto;
+    }
+    .app-container {
+        height: calc(100vh - 120px); /* Учитываем высоту новой шапки */
+    }
+    .logo { 
+        font-size: 20px; 
+        justify-content: center;
+        width: 100%;
+    }
+    .beta-badge { 
+        display: none; /* Скрываем бейдж на очень узких экранах, чтобы не мешал */
+    }
+    .user-nav { 
+        width: 100%; 
+        justify-content: space-between; 
+        padding: 0 10px;
+    }
+    .lang-select {
+        margin-right: 0 !important;
+    }
+}
+
+/* =========================================
+   Mobile Navbar Improvements
+   ========================================= */
+@media (max-width: 768px) {
+    .landing-nav {
+        flex-direction: column;
+        padding: 15px;
+        gap: 15px;
+    }
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+    .logo {
+        justify-content: center;
+        width: 100%;
+    }
+    .beta-badge {
+        position: static;
+        margin-left: 10px;
+    }
+    .navbar {
+        flex-direction: column;
+        height: auto;
+        padding: 15px;
+        gap: 10px;
+    }
+    .user-nav {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .app-container {
+        height: calc(100vh - 130px);
+    }
+}
+
+/* =========================================
+   Русская версия: длинные слова и переносы
+   ========================================= */
+html[lang="ru"] .hero h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.15;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+html[lang="ru"] .hero p {
+    font-size: clamp(15px, 2vw, 17px);
+    overflow-wrap: break-word;
+}
+
+html[lang="ru"] .section-title {
+    font-size: clamp(26px, 4vw, 34px);
+    overflow-wrap: break-word;
+}
+
+/* Общие правила для всех языков: предотвращаем вылезание за границы */
+.hero h1, .hero p, .section-title, .pricing-desc, .pricing-features li, .faq-item p, .feature-card p {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+/* Кнопки в hero-секции: разрешаем перенос на мобильных */
+@media (max-width: 600px) {
+    .hero-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+    .btn-primary-large, .btn-secondary-large {
+        width: 100%;
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
+    }
+    .hero h1 {
+        font-size: 30px !important;
+    }
+    .gradient-text {
+        display: inline-block;
+    }
+    .hero-stats {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+    }
+}
+
+/* Кнопки в тарифах: не сжимаются до нечитаемого вида */
+.btn-pricing {
+    white-space: normal;
+    text-align: center;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* =========================================
+   Mobile Padding & Badge Fixes
+   ========================================= */
+@media (max-width: 768px) {
+    .hero {
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+        box-sizing: border-box;
+    }
+    
+    .hero-content {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0 10px;
+    }
+
+    /* Чуть уменьшаем заголовок, чтобы не упирался в края */
+    .hero h1 {
+        font-size: 28px !important;
+        line-height: 1.2;
+        margin-bottom: 15px;
+        word-break: break-word;
+    }
+
+    /* Параграфу даем отступы и переносы */
+    .hero p {
+        font-size: 15px !important;
+        padding: 0 5px;
+        margin-bottom: 20px;
+        word-break: break-word;
+    }
+
+    /* Зеленая плашка (On-Premise) */
+    .hero-content > div[style*="border: 1px solid var(--success)"] {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 10px 15px !important;
+        white-space: normal !important;
+        text-align: center;
+        font-size: 13px !important;
+    }
+
+    /* Кнопки в hero-секции */
+    .hero-buttons {
+        width: 100%;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .btn-primary-large, .btn-secondary-large {
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: center;
+        text-align: center;
+        white-space: normal;
+    }
 }
