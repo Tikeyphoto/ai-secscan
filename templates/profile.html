@@ -4,98 +4,178 @@
     <meta charset="UTF-8">
     <title>Личный кабинет - AI-SecScan</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Переопределяем стили для страницы профиля, чтобы сделать ее на весь экран */
+        body { overflow: hidden; } 
+        .navbar { padding: 15px 30px; border-bottom: 1px solid var(--border); }
+        .app-container { display: flex; height: calc(100vh - 65px); width: 100%; margin: 0; padding: 0; }
+        .sidebar { width: 260px; height: 100%; border-radius: 0; border-right: 1px solid var(--border); border-top: none; border-bottom: none; border-left: none; overflow-y: auto; display: flex; flex-direction: column; }
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; background: var(--bg-base); }
+        @media (max-width: 768px) {
+            body { overflow: auto; }
+            .app-container { flex-direction: column; height: auto; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .main-content { padding: 20px; overflow-y: visible; }
+        }
+        /* Стили для сканера внутри профиля */
+        .ai-switch { display: flex; align-items: center; gap: 12px; background: rgba(168, 85, 247, 0.1); border: 1px solid var(--ai-color); padding: 15px; border-radius: 8px; margin-bottom: 20px; cursor: pointer; }
+        .ai-switch input { width: 20px; height: 20px; accent-color: var(--ai-color); cursor: pointer; }
+        .ai-switch label { color: var(--ai-color); font-weight: 600; cursor: pointer; font-size: 15px; margin: 0; }
+        .drop-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s ease; background: rgba(99, 102, 241, 0.05); }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background: rgba(99, 102, 241, 0.1); }
+        .drop-zone i { font-size: 40px; color: var(--primary); margin-bottom: 15px; }
+        .drop-zone p { margin: 5px 0; color: var(--text-muted); }
+        .drop-zone .file-name { color: var(--primary); font-weight: 600; margin-top: 10px; }
+        .score-container { display: flex; align-items: center; gap: 20px; background: var(--bg-surface); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .score-circle { width: 80px; height: 80px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: 800; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .score-A { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 3px solid var(--success); }
+        .score-B { background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 3px solid #3b82f6; }
+        .score-C { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 3px solid var(--warning); }
+        .score-D { background: rgba(249, 115, 22, 0.2); color: #f97316; border: 3px solid #f97316; }
+        .score-F { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 3px solid var(--danger); }
+        .finding { background: var(--bg-surface); border-radius: 8px; padding: 20px; margin-bottom: 15px; border-left: 4px solid var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .finding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .finding-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+        .badge.CRITICAL { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        .badge.HIGH { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .badge.MEDIUM { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid #fbbf24; }
+        .badge.AI_LOGIC_FLAW { background: rgba(168, 85, 247, 0.2); color: var(--ai-color); border: 1px solid var(--ai-color); }
+        .code-block { background: #000; padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #a6e3a1; overflow-x: auto; margin-top: 10px; border: 1px solid #222; }
+        .btn-fix { background: transparent; border: 1px solid var(--ai-color); color: var(--ai-color); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .btn-fix:hover { background: var(--ai-color); color: white; }
+        .fix-container { margin-top: 15px; display: none; }
+        .fix-header { font-size: 13px; color: var(--ai-color); font-weight: 600; margin-bottom: 5px; }
+        .code-block-fixed { background: #000; padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #a6e3a1; overflow-x: auto; border: 1px solid var(--ai-color); box-shadow: 0 0 10px rgba(168, 85, 247, 0.2); }
+        .spinner { display: none; width: 40px; height: 40px; border: 4px solid rgba(99, 102, 241, 0.3); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="logo"><i class="fa-solid fa-shield-halved"></i> AI-SecScan</div>
         <div class="user-nav">
-            <a href="/" class="btn" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);"><i class="fa-solid fa-arrow-left"></i> На главную</a>
+            <a href="/logout" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Выйти</a>
         </div>
     </nav>
 
-    <div class="container">
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}{% for message in messages %}<div class="error-msg" style="background: rgba(16, 185, 129, 0.2); color: var(--success); border-color: var(--success);">{{ message }}</div>{% endfor %}{% endif %}
-        {% endwith %}
-
-        <div class="dashboard-grid">
-            <!-- Левая колонка: Профиль и Статистика -->
-            <div>
-                <div class="card">
-                    <div class="profile-header">
-                        <div class="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
-                        <div class="profile-info">
-                            <h2>{{ user['username'] }}</h2>
-                            <p>Участник AI-SecScan</p>
-                        </div>
-                    </div>
-
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <h4><i class="fa-solid fa-radar"></i> Всего сканов</h4>
-                            <div class="value">{{ stats.total_scans }}</div>
-                        </div>
-                        <div class="stat-box danger">
-                            <h4><i class="fa-solid fa-bug"></i> Найдено уязвимостей</h4>
-                            <div class="value">{{ stats.total_issues }}</div>
-                        </div>
-                    </div>
-
-                    <div class="usage-bar-wrapper" style="margin-bottom: 20px;">
-                        <div class="usage-text">
-                            <span>Использовано сегодня</span>
-                            <span>
-                                {% if user['plan'] == 'pro' %}
-                                    Безлимит
-                                {% else %}
-                                    {{ user['scans_today'] }} / 5
-                                {% endif %}
-                            </span>
-                        </div>
-                        {% if user['plan'] == 'free' %}
-                            {% set percent = (user['scans_today'] / 5 * 100) | int %}
-                            {% set color = 'warning' if percent >= 80 else '' %}
-                            <div class="progress-bg">
-                                <div class="progress-fill {{ color }}" style="width: {{ percent }}%;"></div>
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div style="text-align: center;">
-                        <div style="font-size: 15px; margin-bottom: 15px;">Ваш тариф: 
-                            <span class="badge" style="font-size: 14px; background: {{ 'rgba(245, 158, 11, 0.2)' if user['plan'] == 'pro' else 'var(--bg-base)' }}; color: {{ 'var(--warning)' if user['plan'] == 'pro' else 'var(--text-muted)' }}; border: 1px solid {{ 'var(--warning)' if user['plan'] == 'pro' else 'var(--border)' }};">
-                                {{ (user['plan'] or 'FREE') | upper }}
-                            </span>
-                        </div>
-                        
-                        {% if user['plan'] == 'free' %}
-                            <form action="/upgrade" method="POST" style="margin: 0;">
-                                <button type="submit" class="btn" style="background: var(--warning); color: #000; width: 100%; justify-content: center;"><i class="fa-solid fa-crown"></i> Перейти на Pro (Безлимит)</button>
-                            </form>
-                        {% else %}
-                            <div style="color: var(--success); font-size: 14px;"><i class="fa-solid fa-check-circle"></i> У вас неограниченный доступ</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="card" style="text-align: center; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));">
-                    <h4 style="margin-top: 0;">Готовы проверить новый код?</h4>
-                    <a href="/" class="btn" style="margin-top: 10px;"><i class="fa-solid fa-play"></i> Новое сканирование</a>
+    <div class="app-container">
+        
+        <!-- ЛЕВОЕ МЕНЮ (SIDEBAR) -->
+        <aside class="sidebar card" style="margin: 0; border-radius: 0;">
+            <div class="sidebar-header">
+                <div class="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
+                <div>
+                    <h3 style="margin:0; font-size: 16px;">{{ user['username'] }}</h3>
+                    <span class="badge" style="background: {{ 'rgba(245, 158, 11, 0.2)' if user['plan'] == 'pro' else 'var(--bg-base)' }}; color: {{ 'var(--warning)' if user['plan'] == 'pro' else 'var(--text-muted)' }}; font-size: 10px;">{{ (user['plan'] or 'FREE') | upper }}</span>
                 </div>
             </div>
 
-            <!-- Правая колонка: История -->
-            <div class="card">
-                <h3 style="margin-top: 0; margin-bottom: 20px;"><i class="fa-solid fa-clock-rotate-left"></i> Последние сканирования</h3>
+            <nav class="sidebar-nav">
+                <!-- Сканер теперь первая вкладка и открыта по умолчанию -->
+                <button class="nav-btn active" onclick="openTab(event, 'tab-scan')"><i class="fa-solid fa-magnifying-glass"></i> Сканер</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-dashboard')"><i class="fa-solid fa-chart-pie"></i> Статистика</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-api')"><i class="fa-solid fa-key"></i> API Ключи</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-webhooks')"><i class="fa-solid fa-link"></i> Webhooks</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-rules')"><i class="fa-solid fa-sliders"></i> Мои правила</button>
+            </nav>
+
+            <div style="padding: 20px; margin-top: auto;">
+                {% if user['plan'] == 'free' %}
+                    <form action="/upgrade" method="POST">
+                        <button type="submit" class="btn" style="background: var(--warning); color: #000; width: 100%; font-size: 12px; padding: 10px;"><i class="fa-solid fa-crown"></i> Upgrade to Pro</button>
+                    </form>
+                {% else %}
+                    <div style="font-size: 12px; color: var(--success); text-align: center;"><i class="fa-solid fa-check-circle"></i> Pro активен</div>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- ПРАВАЯ ЧАСТЬ (КОНТЕНТ) -->
+        <main class="main-content">
+            
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}{% for message in messages %}<div class="error-msg" style="background: rgba(16, 185, 129, 0.2); color: var(--success); border-color: var(--success);">{{ message }}</div>{% endfor %}{% endif %}
+            {% endwith %}
+
+            <!-- ВКЛАДКА 1: СКАНЕР -->
+            <div id="tab-scan" class="tab-content active">
+                <h2><i class="fa-solid fa-magnifying-glass"></i> Сканирование кода</h2>
+                
+                <label class="ai-switch" for="useAi" style="margin-top: 20px;">
+                    <input type="checkbox" id="useAi">
+                    <label for="useAi"><i class="fa-solid fa-robot"></i> Включить глубокий AI-анализ (LLM)</label>
+                </label>
+
+                <div class="drop-zone" id="dropZone">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p style="font-size: 18px; font-weight: 600;">Перетащите файл сюда или нажмите для выбора</p>
+                    <p>Поддерживаются: ZIP-архивы, .py, .js, .php, .java, .env, .yml, .json</p>
+                    <div class="file-name" id="fileName"></div>
+                    <input type="file" id="fileInput" style="display: none;" accept=".zip,.py,.js,.php,.java,.ts,.env,.yml,.yaml,.json,.txt,.cfg,.ini,.xml">
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn" id="scanFileBtn" onclick="scanFile()" disabled style="font-size: 16px; padding: 12px 30px;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Сканировать файл
+                    </button>
+                </div>
+
+                                <!-- Блок сканирования GitHub -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
+                    <h3><i class="fa-brands fa-github"></i> Сканирование репозитория GitHub</h3>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 10px;">Вставьте ссылку на публичный репозиторий (например, https://github.com/user/repo)</p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="githubUrl" placeholder="https://github.com/user/repo" style="flex: 1; padding: 12px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                        <button class="btn" onclick="scanGitHub()" id="scanGithubBtn"><i class="fa-brands fa-github"></i> Сканировать</button>
+                    </div>
+                </div>
+
+                <div style='margin-top: 20px;'>
+                    <p style='margin-top: 0; color: var(--text-muted); font-size: 14px;'>Или вставьте код вручную:</p>
+                    <textarea id="codeInput" placeholder="def my_function():\n    pass" style="width: 100%; height: 150px; background: var(--bg-base); color: #a6e3a1; border: 1px solid var(--border); padding: 15px; font-family: 'JetBrains Mono', monospace; border-radius: 8px; resize: vertical;"></textarea>
+                    <div style="text-align: right; margin-top: 10px;">
+                        <button class="btn" onclick="scanCode()"><i class="fa-solid fa-code"></i> Сканировать текст</button>
+                    </div>
+                </div>
+
+                <div id="loader" class="spinner"></div>
+                <div id="results" style="margin-top: 20px;"></div>
+            </div>
+
+            <!-- ВКЛАДКА 2: ДАШБОРД -->
+            <div id="tab-dashboard" class="tab-content">
+                <h2><i class="fa-solid fa-chart-pie"></i> Обзор</h2>
+                
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="stat-box">
+                        <h4><i class="fa-solid fa-radar"></i> Всего сканов</h4>
+                        <div class="value">{{ stats.total_scans }}</div>
+                    </div>
+                    <div class="stat-box danger">
+                        <h4><i class="fa-solid fa-bug"></i> Найдено уязвимостей</h4>
+                        <div class="value">{{ stats.total_issues }}</div>
+                    </div>
+                </div>
+
+                <div class="usage-bar-wrapper" style="margin-bottom: 30px;">
+                    <div class="usage-text">
+                        <span>Использовано сегодня</span>
+                        <span>{% if user['plan'] == 'pro' %}Безлимит{% else %}{{ user['scans_today'] }} / 5{% endif %}</span>
+                    </div>
+                    {% if user['plan'] == 'free' %}
+                        {% set percent = (user['scans_today'] / 5 * 100) | int %}
+                        {% set color = 'warning' if percent >= 80 else '' %}
+                        <div class="progress-bg">
+                            <div class="progress-fill {{ color }}" style="width: {{ percent }}%;"></div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Последние сканирования</h3>
                 {% if history %}
                     <table class="history-table">
-                        <thead>
-                            <tr>
-                                <th>Файл</th>
-                                <th>Дата</th>
-                                <th>Проблемы</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>Файл</th><th>Дата</th><th>Проблемы</th></tr></thead>
                         <tbody>
                             {% for scan in history %}
                             <tr>
@@ -107,13 +187,434 @@
                         </tbody>
                     </table>
                 {% else %}
-                    <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
-                        <i class="fa-solid fa-folder-open" style="font-size: 40px; margin-bottom: 15px; opacity: 0.5;"></i>
-                        <p>Вы еще не загружали файлы.</p>
-                    </div>
+                    <p style="color: var(--text-muted);">Вы еще не загружали файлы.</p>
                 {% endif %}
             </div>
-        </div>
+
+            <!-- ВКЛАДКА 3: API КЛЮЧИ -->
+            <div id="tab-api" class="tab-content">
+                <h2><i class="fa-solid fa-key"></i> API & CI/CD</h2>
+                <p style="color: var(--text-muted);">Управляйте ключами доступа к API для автоматизации сканирования.</p>
+                
+                {% if user['plan'] == 'free' %}
+                    <div class="error-msg" style="background: rgba(245, 158, 11, 0.1); border-color: var(--warning); color: var(--warning); margin-top: 20px;">
+                        <i class="fa-solid fa-lock"></i> API-доступ отключен на тарифе Free. Перейдите на Pro.
+                    </div>
+                {% else %}
+                    <div style="margin-top: 20px;">
+                        {% for key in user_api_keys %}
+                        <div class="rule-item" style="background: #11111b; border-color: var(--primary);">
+                            <div class="rule-info">
+                                <span class="rule-title" style="color: var(--primary);"><i class="fa-solid fa-key"></i> {{ key['name'] }}</span>
+                                <span class="rule-pattern">{{ key['api_key'] }}</span>
+                            </div>
+                            <button class="btn-delete" onclick="deleteKey({{ key['id'] }})"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        {% else %}
+                        <p style="color: var(--text-muted); font-size: 14px;">У вас пока нет API-ключей.</p>
+                        {% endfor %}
+                    </div>
+
+                    {% set limit = 999 if user['plan'] == 'enterprise' else (5 if user['plan'] == 'team' else 1) %}
+                    {% if user_api_keys|length < limit %}
+                    <div style="display: flex; gap: 10px; margin-top: 20px; max-width: 600px;">
+                        <input type="text" id="keyNameInput" placeholder="Название (например, GitHub Actions)" style="flex: 1; padding: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                        <button class="btn" onclick="generateKey()"><i class="fa-solid fa-plus"></i> Создать ключ</button>
+                    </div>
+                    {% else %}
+                    <p style="color: var(--warning); font-size: 14px; margin-top: 15px;"><i class="fa-solid fa-circle-info"></i> Достигнут лимит ключей ({{ limit }}).</p>
+                    {% endif %}
+                {% endif %}
+
+                <div style="margin-top: 20px; background: #000; padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-muted); max-width: 800px;">
+                    <span style="color: #89b4fa;">curl</span> -X POST http://127.0.0.1:8080/api/v1/scan \<br>
+                    &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Authorization: Bearer ВАШ_КЛЮЧ"</span> \<br>
+                    &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Content-Type: application/json"</span> \<br>
+                    &nbsp;&nbsp;-d <span style="color: #f9e2af;">'{"code": "eval(1)", "filename": "test.py"}'</span>
+                </div>
+            </div>
+
+            <!-- ВКЛАДКА 4: WEBHOOKS -->
+            <div id="tab-webhooks" class="tab-content">
+                <h2><i class="fa-solid fa-link"></i> Интеграции (Webhooks)</h2>
+                <p style="color: var(--text-muted);">Настройте отправку уязвимостей в Jira, Slack или Discord.</p>
+                
+                <div style="display: flex; gap: 10px; align-items: center; margin-top: 20px; max-width: 800px;">
+                    <input type="text" id="webhookInput" value="{{ user['webhook_url'] or '' }}" placeholder="https://your-jira.com/webhook/..." style="flex: 1; padding: 12px; background: var(--bg-base); border: 1px solid var(--border); color: #a6e3a1; border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+                    <button class="btn" onclick="saveWebhook()"><i class="fa-solid fa-save"></i> Сохранить</button>
+                </div>
+            </div>
+
+            <!-- ВКЛАДКА 5: ПРАВИЛА -->
+            <div id="tab-rules" class="tab-content">
+                <h2><i class="fa-solid fa-sliders"></i> Пользовательские правила</h2>
+                <p style="color: var(--text-muted);">Добавьте Regex для поиска специфичных уязвимостей вашей компании.</p>
+                
+                <div class="rules-list" style="margin-top: 20px; max-width: 800px;">
+                    {% for rule in custom_rules %}
+                    <div class="rule-item">
+                        <div class="rule-info">
+                            <span class="rule-title"><span class="badge {{ rule['severity'] }}">{{ rule['severity'] }}</span> {{ rule['rule_id'] }}</span>
+                            <span class="rule-pattern">{{ rule['pattern'] }}</span>
+                        </div>
+                        <button class="btn-delete" onclick="deleteRule({{ rule['id'] }})"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    {% else %}
+                    <p style="color: var(--text-muted); font-size: 14px;">У вас пока нет кастомных правил.</p>
+                    {% endfor %}
+                </div>
+
+                <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px; max-width: 800px;">
+                    <h4>Добавить новое правило</h4>
+                    <div class="rule-form" style="grid-template-columns: 1fr 1fr;">
+                        <div>
+                            <label style="font-size:12px; color:var(--text-muted);">Название (Rule ID)</label>
+                            <input type="text" id="ruleId" placeholder="INTERNAL_KEY_LEAK">
+                        </div>
+                        <div>
+                            <label style="font-size:12px; color:var(--text-muted);">Уровень опасности</label>
+                            <select id="ruleSeverity">
+                                <option value="HIGH">HIGH (Высокий)</option>
+                                <option value="CRITICAL">CRITICAL (Критический)</option>
+                                <option value="MEDIUM">MEDIUM (Средний)</option>
+                            </select>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="font-size:12px; color:var(--text-muted);">Регулярное выражение (Regex)</label>
+                            <input type="text" id="rulePattern" placeholder="api_key=sk_live_...">
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="font-size:12px; color:var(--text-muted);">Описание</label>
+                            <input type="text" id="ruleMessage" placeholder="Найден внутренний API-ключ">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="addRule()" style="margin-top: 15px;"><i class="fa-solid fa-plus"></i> Добавить правило</button>
+                </div>
+            </div>
+
+        </main>
     </div>
+
+    <script>
+        // --- ВКЛАДКИ ---
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("nav-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // --- ЛОГИКА СКАНЕРА ---
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const scanFileBtn = document.getElementById('scanFileBtn');
+
+        if (dropZone) {
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    updateFileName();
+                }
+            });
+            fileInput.addEventListener('change', updateFileName);
+        }
+
+        function updateFileName() {
+            if (fileInput.files.length > 0) {
+                fileName.innerHTML = `<i class="fa-solid fa-file-code"></i> Выбран файл: ${fileInput.files[0].name}`;
+                scanFileBtn.disabled = false;
+            } else {
+                fileName.innerHTML = '';
+                scanFileBtn.disabled = true;
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function hideLoading() { document.getElementById('loader').style.display = 'none'; }
+
+        function handleError(status, data) {
+            hideLoading();
+            const resultsDiv = document.getElementById('results');
+            let errorMsg = data.error || `HTTP ${status}`;
+            let actionHtml = status === 403 ? `<br><br><a href="/profile" style="color: white;">Перейти в профиль, чтобы сменить тариф →</a>` : '';
+            resultsDiv.innerHTML = `<div class="error-msg" style="font-size: 16px; padding: 20px;">⚠️ ${errorMsg} ${actionHtml}</div>`;
+        }
+
+                async function scanGitHub() {
+            const repoUrl = document.getElementById('githubUrl').value;
+            if (!repoUrl.trim()) return alert("Введите ссылку на репозиторий!");
+            
+            const useAi = document.getElementById('useAi').checked;
+            const btn = document.getElementById('scanGithubBtn');
+            
+            showLoading();
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
+            
+            try {
+                const response = await fetch('/api/scan_github', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repo_url: repoUrl, use_ai: useAi })
+                });
+                const data = await response.json();
+                hideLoading();
+                if (!response.ok) { handleError(response.status, data); return; }
+                handleResponse(data);
+            } catch (e) {
+                hideLoading();
+                document.getElementById('results').innerHTML = `<div class="error-msg">Ошибка сети: ${e.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-brands fa-github"></i> Сканировать';
+            }
+        }
+
+        async function scanFile() {
+            if (!fileInput.files.length) return;
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('use_ai', document.getElementById('useAi').checked);
+            
+            showLoading();
+            try {
+                const response = await fetch('/api/scan', { method: 'POST', body: formData });
+                const data = await response.json();
+                hideLoading();
+                if (!response.ok) { handleError(response.status, data); return; }
+                handleResponse(data);
+            } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">Ошибка сети: ${e.message}</div>`; }
+        }
+
+        async function scanCode() {
+            const code = document.getElementById('codeInput').value;
+            if (!code.trim()) return alert("Введите код!");
+            
+            showLoading();
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code, use_ai: document.getElementById('useAi').checked })
+                });
+                const data = await response.json();
+                hideLoading();
+                if (!response.ok) { handleError(response.status, data); return; }
+                handleResponse(data);
+            } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">Ошибка сети: ${e.message}</div>`; }
+        }
+
+        function handleResponse(data, isHistorical = false) {
+            const resultsDiv = document.getElementById('results');
+            
+            const errors = data.findings.filter(f => f.error);
+            const validFindings = data.findings.filter(f => !f.error && f.weight > 0.0);
+
+            let html = '';
+            if (!isHistorical && data.scans_left !== undefined) {
+                html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="margin:0;">Результаты</h3>
+                            <span class="badge" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main);">Осталось сканирований: ${data.scans_left}</span>
+                         </div>`;
+            }
+            
+            errors.forEach(e => { html += `<div class="error-msg">🚫 ${e.error}</div>`; });
+
+            html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <a href="/api/report/pdf" class="btn" style="background: #e11d48;"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                        <a href="/api/report/json" class="btn" style="background: var(--success);"><i class="fa-brands fa-js"></i> JSON</a>
+                        <a href="/api/report/sarif" class="btn" style="background: #3b82f6;"><i class="fa-solid fa-shield"></i> SARIF</a>
+                     </div>`;
+
+            // Оценка
+            if (validFindings.length > 0 && data.score !== undefined) {
+                html += `
+                <div class="score-container">
+                    <div class="score-circle score-${data.grade}">${data.grade}</div>
+                    <div>
+                        <h3 style="margin: 0; color: var(--text-main);">Оценка безопасности: ${data.score}/100</h3>
+                        <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 14px;">${
+                            data.grade === 'A' ? 'Отличный уровень защиты!' : 
+                            data.grade === 'F' ? 'Критический уровень риска.' : 
+                            'Есть проблемы, которые следует исправить.'
+                        }</p>
+                    </div>
+                </div>`;
+            }
+
+            if (validFindings.length === 0) {
+                resultsDiv.innerHTML = html + '<div class="card" style="text-align: center; color: var(--success); font-size: 20px; padding: 40px;"><i class="fa-solid fa-check-circle"></i> Уязвимостей не найдено!</div>';
+                return;
+            }
+            
+            html += `<h3 style="margin-bottom: 20px;">Найдено проблем: <span style="color: var(--danger)">${validFindings.length}</span></h3>`;
+            validFindings.forEach((f, index) => {
+                const isAi = f.rule_id === 'AI_LOGIC_FLAW';
+                const badgeClass = isAi ? 'AI_LOGIC_FLAW' : f.severity;
+                const icon = isAi ? 'fa-robot' : 'fa-triangle-exclamation';
+                
+                html += `
+                <div class="finding ${f.severity}" style="border-left-color: ${isAi ? 'var(--ai-color)' : (f.severity === 'CRITICAL' ? 'var(--danger)' : 'var(--warning)')}">
+                    <div class="finding-header">
+                        <div class="finding-title"><i class="fa-solid ${icon}" style="color: ${isAi ? 'var(--ai-color)' : 'inherit'}"></i> ${f.rule_id}</div>
+                        <span class="badge ${badgeClass}">${f.severity}</span>
+                    </div>
+                    <p style="margin: 10px 0; color: var(--text-main);">${f.message}</p>
+                    <div style="font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-file-code"></i> ${f.file || data.filename} : строка ${f.line}</div>
+                    <div class="code-block">${f.code}</div>
+                    
+                    <div class="finding-actions" style="justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
+                        <div>
+                            <button class="btn-feedback btn-tp" onclick="sendFeedback('${f.rule_id}', true, ${index}, '${f.id}')"><i class="fa-solid fa-check"></i> Реальная</button>
+                            <button class="btn-feedback btn-fp" onclick="sendFeedback('${f.rule_id}', false, ${index}, '${f.id}')"><i class="fa-solid fa-xmark"></i> Ложная</button>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-fix" style="border-color: var(--primary); color: var(--primary);" onclick="createTask('${f.rule_id}', '${f.severity}', ${f.line}, '${encodeURIComponent(f.code)}', '${encodeURIComponent(f.message)}', '${f.file || data.filename}')">
+                                <i class="fa-solid fa-share-nodes"></i> В Jira
+                            </button>
+                            <button class="btn-fix" onclick="generateFix(this, '${encodeURIComponent(f.code)}', '${encodeURIComponent(f.message)}', '${f.file || data.filename}')">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> AI Autofix
+                            </button>
+                        </div>
+                    </div>
+                    <div class="fix-container">
+                        <div class="fix-header"><i class="fa-solid fa-robot"></i> AI Предлагает решение:</div>
+                        <div class="code-block-fixed"></div>
+                    </div>
+                </div>`;
+            });
+            resultsDiv.innerHTML = html;
+        }
+
+        async function generateFix(btn, encodedCode, encodedIssue, file) {
+            const findingDiv = btn.closest('.finding');
+            const fixContainer = findingDiv.querySelector('.fix-container');
+            const codeBlock = fixContainer.querySelector('.code-block-fixed');
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Генерация...';
+            btn.disabled = true;
+            fixContainer.style.display = 'block';
+            codeBlock.innerText = "⏳ Нейросеть думает (это может занять 10-20 секунд)...";
+            
+            try {
+                const response = await fetch('/api/fix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: decodeURIComponent(encodedCode), issue: decodeURIComponent(encodedIssue), file: file })
+                });
+                if (!response.ok) throw new Error("Ошибка сервера");
+                
+                codeBlock.innerText = "";
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let fullText = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    let displayText = fullText.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "");
+                    codeBlock.innerText = displayText; 
+                }
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Готово';
+                btn.style.borderColor = 'var(--success)';
+                btn.style.color = 'var(--success)';
+            } catch (e) {
+                codeBlock.innerText = 'Ошибка сети: ' + e.message;
+                btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Ошибка';
+            }
+        }
+
+        async function createTask(ruleId, severity, line, code, message, file) {
+            if (!confirm("Отправить эту уязвимость в ваш таск-трекер?")) return;
+            try {
+                const response = await fetch('/api/create_task', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rule_id: ruleId, severity, line, code: decodeURIComponent(code), message: decodeURIComponent(message), file })
+                });
+                const data = await response.json();
+                if (data.error) alert("Ошибка: " + data.error);
+                else alert("✅ " + data.message);
+            } catch (e) { alert("Ошибка сети: " + e.message); }
+        }
+
+        async function sendFeedback(ruleId, isTp, index, findingHash) {
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rule_id: ruleId, is_tp: isTp, finding_hash: findingHash })
+                });
+                if (response.ok) {
+                    const btnParent = event.target.closest('.finding-actions');
+                    btnParent.innerHTML = isTp ? '<span style="color:var(--success)"><i class="fa-solid fa-check"></i> Отмечено как реальное</span>' : '<span style="color:var(--danger)"><i class="fa-solid fa-xmark"></i> Скрыто как ложное</span>';
+                    if (!isTp) { btnParent.closest('.finding').style.opacity = '0.5'; }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // --- ОСТАЛЬНЫЕ ФУНКЦИИ (API, Webhooks, Rules) ---
+        async function generateKey() {
+            const nameInput = document.getElementById('keyNameInput');
+            const name = nameInput ? nameInput.value : 'My Key';
+            const res = await fetch('/api/generate_key', { 
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name })
+            });
+            const data = await res.json();
+            if (data.error) return alert("Ошибка: " + data.error);
+            location.reload();
+        }
+
+        async function deleteKey(id) {
+            if (!confirm("Удалить этот API-ключ?")) return;
+            await fetch(`/api/delete_key/${id}`, { method: 'DELETE' });
+            location.reload();
+        }
+
+        async function saveWebhook() {
+            const url = document.getElementById('webhookInput').value;
+            const res = await fetch('/api/webhook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+            if (res.ok) alert("Webhook URL сохранен!");
+        }
+
+        async function addRule() {
+            const ruleId = document.getElementById('ruleId').value;
+            const severity = document.getElementById('ruleSeverity').value;
+            const pattern = document.getElementById('rulePattern').value;
+            const message = document.getElementById('ruleMessage').value;
+            if (!pattern) return alert("Введите регулярное выражение!");
+            const res = await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rule_id: ruleId || 'CUSTOM_RULE', severity, pattern, message }) });
+            const data = await res.json();
+            if (data.error) return alert("Ошибка: " + data.error);
+            location.reload();
+        }
+        
+        async function deleteRule(id) {
+            if (!confirm("Удалить это правило?")) return;
+            await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+            location.reload();
+        }
+    </script>
 </body>
 </html>

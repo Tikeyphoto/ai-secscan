@@ -193,24 +193,47 @@
                     <p style="margin: 10px 0; color: var(--text-main);">${f.message}</p>
                     <div style="font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-file-code"></i> ${f.file || data.filename} : строка ${f.line}</div>
                     <div class="code-block">${f.code}</div>
-                                        <div class="finding-actions" style="justify-content: space-between;">
+                                        <div class="finding-actions" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                         <div>
                             <button class="btn-feedback btn-tp" onclick="sendFeedback('${f.rule_id}', true, ${index}, '${f.id}')"><i class="fa-solid fa-check"></i> Реальная</button>
                             <button class="btn-feedback btn-fp" onclick="sendFeedback('${f.rule_id}', false, ${index}, '${f.id}')"><i class="fa-solid fa-xmark"></i> Ложная</button>
                         </div>
-                        <button class="btn-fix" onclick="generateFix(this, '${encodeURIComponent(f.code)}', '${encodeURIComponent(f.message)}')">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Исправить с AI
-                        </button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-fix" style="border-color: var(--primary); color: var(--primary);" onclick="createTask('${f.rule_id}', '${f.severity}', ${f.line}, '${encodeURIComponent(f.code)}', '${encodeURIComponent(f.message)}', '${f.file || data.filename}')">
+                                <i class="fa-solid fa-share-nodes"></i> В Jira
+                            </button>
+                            <button class="btn-fix" onclick="generateFix(this, '${encodeURIComponent(f.code)}', '${encodeURIComponent(f.message)}', '${f.file || data.filename}')">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> AI Autofix
+                            </button>
+                        </div>
                     </div>
                     <div class="fix-container">
-                        <div class="fix-header"><i class="fa-solid fa-robot"></i> AI Предлагает безопасный код:</div>
+                        <div class="fix-header"><i class="fa-solid fa-robot"></i> AI Предлагает решение:</div>
                         <div class="code-block-fixed"></div>
                     </div></div>`;
             });
             resultsDiv.innerHTML = html;
         }
 
-                async function generateFix(btn, encodedCode, encodedIssue) {
+                        async function createTask(ruleId, severity, line, code, message, file) {
+            if (!confirm("Отправить эту уязвимость в ваш таск-трекер?")) return;
+            
+            try {
+                const response = await fetch('/api/create_task', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rule_id: ruleId, severity, line, code: decodeURIComponent(code), message: decodeURIComponent(message), file })
+                });
+                const data = await response.json();
+                if (data.error) {
+                    alert("Ошибка: " + data.error);
+                } else {
+                    alert("✅ " + data.message);
+                }
+            } catch (e) { alert("Ошибка сети: " + e.message); }
+        }
+
+        async function generateFix(btn, encodedCode, encodedIssue, file) {
             const findingDiv = btn.closest('.finding');
             const fixContainer = findingDiv.querySelector('.fix-container');
             const codeBlock = fixContainer.querySelector('.code-block-fixed');
@@ -218,25 +241,39 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Генерация...';
             btn.disabled = true;
             fixContainer.style.display = 'block';
-            codeBlock.innerText = 'Нейросеть анализирует уязвимость и пишет безопасный код...';
+            codeBlock.innerText = '';
             
             try {
+                codeBlock.innerText = "⏳ Нейросеть думает (это может занять 10-20 секунд)...";
+                
                 const response = await fetch('/api/fix', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: decodeURIComponent(encodedCode), issue: decodeURIComponent(encodedIssue) })
+                    body: JSON.stringify({ code: decodeURIComponent(encodedCode), issue: decodeURIComponent(encodedIssue), file: file })
                 });
-                const data = await response.json();
-                if (data.status === 'success') {
-                    codeBlock.innerText = data.fixed_code;
-                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Готово';
-                    btn.style.borderColor = 'var(--success)';
-                    btn.style.color = 'var(--success)';
-                } else {
-                    codeBlock.innerText = 'Ошибка AI: ' + (data.error || 'Неизвестно');
+                
+                if (!response.ok) throw new Error("Ошибка сервера");
+                
+                codeBlock.innerText = "";
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let fullText = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    let displayText = fullText.replace(/```[a-z]*\n?/gi, "").replace(/```/g, ""); codeBlock.innerText = displayText;
                 }
+                
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Готово';
+                btn.style.borderColor = 'var(--success)';
+                btn.style.color = 'var(--success)';
             } catch (e) {
                 codeBlock.innerText = 'Ошибка сети: ' + e.message;
+                btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Ошибка';
             }
         }
 

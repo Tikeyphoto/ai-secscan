@@ -1,4 +1,4 @@
-import ast
+﻿import ast
 import json
 import os
 import hashlib
@@ -14,7 +14,7 @@ class SecurityScanner:
         raw = f"{rule_id}|{code}"
         return hashlib.sha256(raw.encode('utf-8')).hexdigest()[:16]
 
-    def scan_code(self, code: str, filename: str, user_baselines: dict = None) -> list:
+    def scan_code(self, code: str, filename: str, user_baselines: dict = None, custom_rules: list = None) -> list:
         findings = []
         ext = os.path.splitext(filename)[1].lower()
         
@@ -41,31 +41,36 @@ class SecurityScanner:
                         if re.search(rule["pattern"], line, flags):
                             self._add_finding(findings, rule, code, line_num, user_baselines)
                             
+        # --- Пользовательские правила ---
+        if custom_rules:
+            lines = code.split('\n')
+            for line_num, line in enumerate(lines, 1):
+                for c_rule in custom_rules:
+                    try:
+                        if re.search(c_rule['pattern'], line):
+                            self._add_finding(findings, {
+                                "id": c_rule['rule_id'],
+                                "severity": c_rule['severity'],
+                                "message": "[CUSTOM] " + c_rule['message']
+                            }, code, line_num, user_baselines)
+                    except Exception:
+                        pass # Игнорируем битые регулярки клиента
+
         return findings
 
     def _get_func_name(self, node) -> str:
-        if isinstance(node, ast.Name):
-            return node.id
-        elif isinstance(node, ast.Attribute):
-            return f"{self._get_func_name(node.value)}.{node.attr}"
+        if isinstance(node, ast.Name): return node.id
+        elif isinstance(node, ast.Attribute): return f"{self._get_func_name(node.value)}.{node.attr}"
         return ""
 
     def _add_finding(self, findings: list, rule: dict, code: str, line: int, user_baselines: dict = None):
         lines = code.split('\n')
         code_snippet = lines[line-1].strip() if line <= len(lines) else "N/A"
         weight = db_manager.get_weight(rule['id'])
-        
         finding_hash = self._generate_hash(rule['id'], code_snippet)
-        
-        if user_baselines and finding_hash in user_baselines:
-            weight = 0.0
+        if user_baselines and finding_hash in user_baselines: weight = 0.0
         
         findings.append({
-            "id": finding_hash,
-            "rule_id": rule['id'],
-            "severity": rule['severity'],
-            "message": rule['message'],
-            "line": line,
-            "code": code_snippet,
-            "weight": weight
+            "id": finding_hash, "rule_id": rule['id'], "severity": rule['severity'],
+            "message": rule['message'], "line": line, "code": code_snippet, "weight": weight
         })
