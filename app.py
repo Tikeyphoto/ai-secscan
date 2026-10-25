@@ -108,9 +108,18 @@ def register():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
-        if db_manager.create_user(username, generate_password_hash(password), email):
-            verify_link = f"http://127.0.0.1:8080/verify/{username}"
-            print(f"\n[EMAIL] Письмо для {email}:\nПодтвердите аккаунт: {verify_link}\n", flush=True)
+        invite_code = request.form.get('invite_code', '').strip()
+        
+        plan = 'pro'
+        if invite_code:
+            code_data = db_manager.validate_invite(invite_code)
+            if not code_data:
+                return render_template('register.html', error="Неверный или просроченный код приглашения.")
+            plan = code_data['plan']
+        
+        if db_manager.create_user(username, generate_password_hash(password), email, 1, plan):
+            if invite_code:
+                db_manager.use_invite(invite_code, username)
             return render_template('login.html', error="Аккаунт успешно создан! Теперь вы можете войти.")
         return render_template('register.html', error="Пользователь уже существует")
     return render_template('register.html')
@@ -615,6 +624,113 @@ def download_report(format):
     elif format == 'pdf':
         return Response(ReportGenerator.generate_pdf(findings, filename, score, grade), mimetype='application/pdf', headers={'Content-Disposition': f'attachment;filename=report.pdf'})
     return "Неверный формат", 400
+
+# ============ ADMIN ROUTES ============
+
+from analytics import parse_nginx_log
+
+@app.route('/api/admin/analytics')
+def api_admin_analytics():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    return jsonify(parse_nginx_log())
+
+@app.route('/admin')
+def admin_panel():
+    if 'username' not in session: return redirect(url_for('login'))
+    user = db_manager.get_user(session['username'])
+    if not user or not user['is_admin']:
+        return "Доступ запрещен. Только для администраторов.", 403
+    return render_template('admin.html', user=user)
+
+@app.route('/api/admin/users')
+def api_admin_users():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    users = db_manager.get_all_users()
+    return jsonify([dict(u) for u in users])
+
+@app.route('/api/admin/user/<username>/update', methods=['POST'])
+def api_admin_user_update(username):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    data = request.get_json()
+    if db_manager.admin_update_user(username, data.get('field'), data.get('value')):
+        return jsonify({"status": "success"})
+    return jsonify({"error": "Ошибка обновления"}), 400
+
+@app.route('/api/admin/user/<username>/delete', methods=['POST'])
+def api_admin_user_delete(username):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    if username == session['username']:
+        return jsonify({"error": "Нельзя удалить самого себя"}), 400
+    db_manager.admin_delete_user(username)
+    return jsonify({"status": "success"})
+
+@app.route('/api/admin/user/<username>/reset_password', methods=['POST'])
+def api_admin_user_reset_pwd(username):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    data = request.get_json()
+    new_pwd = data.get('new_password', '')
+    if len(new_pwd) < 6: return jsonify({"error": "Пароль должен быть от 6 символов"}), 400
+    db_manager.admin_reset_password(username, generate_password_hash(new_pwd))
+    return jsonify({"status": "success"})
+
+@app.route('/api/admin/invites')
+def api_admin_invites():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    invites = db_manager.get_all_invites()
+    return jsonify([dict(i) for i in invites])
+
+@app.route('/api/admin/invite/create', methods=['POST'])
+def api_admin_invite_create():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    data = request.get_json()
+    code = db_manager.create_invite(
+        session['username'],
+        data.get('plan', 'pro'),
+        int(data.get('max_uses', 1)),
+        int(data.get('days', 7))
+    )
+    return jsonify({"status": "success", "code": code})
+
+@app.route('/api/admin/invite/<int:invite_id>/delete', methods=['POST'])
+def api_admin_invite_delete(invite_id):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    db_manager.delete_invite(invite_id)
+    return jsonify({"status": "success"})
+
+@app.route('/robots.txt')
+def robots_txt():
+    from flask import Response
+    txt = """User-agent: *
+Disallow: /admin
+Disallow: /api/
+Disallow: /profile
+Allow: /
+
+Sitemap: https://aisecscan.by/sitemap.xml
+"""
+    return Response(txt, mimetype='text/plain')
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    from flask import Response
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url><loc>https://aisecscan.by/</loc><lastmod>{today}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+    <url><loc>https://aisecscan.by/register</loc><lastmod>{today}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+    <url><loc>https://aisecscan.by/login</loc><lastmod>{today}</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+    <url><loc>https://aisecscan.by/terms</loc><lastmod>{today}</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>"""
+    return Response(xml, mimetype='application/xml')
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)

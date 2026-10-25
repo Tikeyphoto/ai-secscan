@@ -111,7 +111,11 @@
                                 <button class="nav-btn" onclick="openTab(event, 'tab-billing')"><i class="fa-solid fa-credit-card"></i> {{ t('profile.billing') }}</button>
                 <button class="nav-btn" onclick="openTab(event, 'tab-settings')"><i class="fa-solid fa-gear"></i> {{ t('profile.settings') }}</button>
                 <button class="nav-btn" onclick="openTab(event, 'tab-faq')"><i class="fa-solid fa-circle-question"></i> {{ t('profile.faq') }}</button>
-            </nav>
+            
+                {% if user['is_admin'] == 1 %}
+                <a href="/admin" class="nav-btn" style="text-decoration: none; color: #f9e2af; border: 1px solid #f9e2af; margin-top: 10px;"><i class="fa-solid fa-crown"></i> Админ-панель</a>
+                {% endif %}
+                </nav>
 
             
             <div style="padding: 20px; border-top: 1px solid var(--border); text-align: center; font-size: 12px;">

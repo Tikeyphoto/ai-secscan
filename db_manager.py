@@ -34,6 +34,8 @@ def init_db():
             cursor.execute("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 1")
         if 'totp_secret' not in columns:
             cursor.execute("ALTER TABLE users ADD COLUMN totp_secret TEXT")
+        if 'is_admin' not in columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS api_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, api_key TEXT UNIQUE, name TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS weights (rule_id TEXT PRIMARY KEY, weight REAL DEFAULT 1.0, tp INTEGER DEFAULT 0, fp INTEGER DEFAULT 0)''')
@@ -43,6 +45,7 @@ def init_db():
         cursor.execute('''CREATE TABLE IF NOT EXISTS custom_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, rule_id TEXT, severity TEXT, pattern TEXT, message TEXT)''')
         
         # Таблица для SBOM
+        cursor.execute('''CREATE TABLE IF NOT EXISTS invite_codes (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL, plan TEXT DEFAULT 'pro', created_by TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, used_by TEXT, used_at DATETIME, expires_at DATETIME, max_uses INTEGER DEFAULT 1, current_uses INTEGER DEFAULT 0)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS sboms (
             username TEXT PRIMARY KEY, filename TEXT, sbom_json TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         
@@ -50,10 +53,12 @@ def init_db():
     finally:
         conn.close()
 
-def create_user(username, password_hash, email):
+def create_user(username, password_hash, email, is_verified=1, plan='pro'):
     conn = get_db()
     try:
-        conn.execute("INSERT INTO users (username, password_hash, email, is_verified, plan) VALUES (?, ?, ?, 1, 'pro')", (username, password_hash, email))
+        count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        is_admin = 1 if count == 0 else 0
+        conn.execute("INSERT INTO users (username, password_hash, email, is_verified, plan, is_admin) VALUES (?, ?, ?, ?, ?, ?)", (username, password_hash, email, is_verified, plan, is_admin))
         conn.commit()
         return True
     except sqlite3.IntegrityError: return False
@@ -278,3 +283,95 @@ def get_last_sbom(username):
         if row: return row['filename'], row['sbom_json']
         return None, None
     finally: conn.close()
+
+# ============ ADMIN & INVITE FUNCTIONS ============
+import uuid as _uuid
+from datetime import datetime as _dt, timedelta as _td
+
+def is_admin(username):
+    u = get_user(username)
+    return bool(u and u['is_admin'])
+
+def get_all_users():
+    conn = get_db()
+    try:
+        return conn.execute("SELECT id, username, email, plan, is_verified, is_admin, scans_today FROM users ORDER BY id").fetchall()
+    finally:
+        conn.close()
+
+def admin_update_user(username, field, value):
+    if field not in ['plan', 'is_verified', 'is_admin']:
+        return False
+    conn = get_db()
+    try:
+        conn.execute(f"UPDATE users SET {field} = ? WHERE username = ?", (value, username))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def admin_delete_user(username):
+    conn = get_db()
+    try:
+        for table in ['users', 'scans', 'scan_reports', 'api_keys', 'user_baselines', 'custom_rules', 'sboms']:
+            try:
+                conn.execute(f"DELETE FROM {table} WHERE username = ?", (username,))
+            except: pass
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def admin_reset_password(username, new_hash):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_hash, username))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def create_invite(created_by, plan='pro', max_uses=1, days=7):
+    code = "INV-" + _uuid.uuid4().hex[:12].upper()
+    expires = (_dt.now() + _td(days=days)).isoformat()
+    conn = get_db()
+    try:
+        conn.execute("INSERT INTO invite_codes (code, plan, created_by, max_uses, expires_at) VALUES (?, ?, ?, ?, ?)", (code, plan, created_by, max_uses, expires))
+        conn.commit()
+        return code
+    finally:
+        conn.close()
+
+def validate_invite(code):
+    conn = get_db()
+    try:
+        row = conn.execute("SELECT * FROM invite_codes WHERE code = ?", (code,)).fetchone()
+        if not row: return None
+        if row['current_uses'] >= row['max_uses']: return None
+        if row['expires_at'] and _dt.fromisoformat(row['expires_at']) < _dt.now(): return None
+        return row
+    finally:
+        conn.close()
+
+def use_invite(code, username):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE invite_codes SET current_uses = current_uses + 1, used_by = ?, used_at = CURRENT_TIMESTAMP WHERE code = ?", (username, code))
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_all_invites():
+    conn = get_db()
+    try:
+        return conn.execute("SELECT * FROM invite_codes ORDER BY created_at DESC").fetchall()
+    finally:
+        conn.close()
+
+def delete_invite(invite_id):
+    conn = get_db()
+    try:
+        conn.execute("DELETE FROM invite_codes WHERE id = ?", (invite_id,))
+        conn.commit()
+    finally:
+        conn.close()
