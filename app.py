@@ -732,5 +732,18 @@ def sitemap_xml():
 </urlset>"""
     return Response(xml, mimetype='application/xml')
 
+
+@app.route('/google355c3ebc960d5104.html')
+def google_verify():
+    from flask import Response
+    return Response("google-site-verification: google355c3ebc960d5104.html", mimetype='text/html')
+
+
+@app.route('/yandex_47481968951e9b26.html')
+def yandex_verify():
+    from flask import Response
+    html = """<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body>Verification: 47481968951e9b26</body></html>"""
+    return Response(html, mimetype='text/html')
+
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)
