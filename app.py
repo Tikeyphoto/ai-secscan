@@ -186,11 +186,12 @@ def scan():
             unique_findings.append(f)
     
     findings = unique_findings
+    score, grade = calculate_score(findings)
+    
     is_only_syntax_error = (len(findings) == 1 and "error" in findings[0])
     if not is_only_syntax_error:
         db_manager.save_scan_report(username, filename, findings)
     
-            score, grade = calculate_score(findings)
     return jsonify({"status": "success", "filename": filename, "findings": findings, "scans_left": scans_left, "score": score, "grade": grade})
 
 @app.route('/api/last_scan', methods=['GET'])
@@ -198,7 +199,19 @@ def last_scan():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
     filename, findings = db_manager.get_last_scan_report(session['username'])
     if not filename: return jsonify({"status": "empty"})
-    return jsonify({"status": "success", "filename": filename, "findings": findings})
+    score, grade = calculate_score(findings)
+    return jsonify({"status": "success", "filename": filename, "findings": findings, "score": score, "grade": grade})
+
+@app.route('/api/fix', methods=['POST'])
+@limiter.limit("5 per minute")
+def ai_fix():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    data = request.get_json()
+    code = data.get('code')
+    issue = data.get('issue')
+    if not code or not issue: return jsonify({"error": "Нет данных"}), 400
+    fixed_code = ai_scanner.generate_fix(code, issue)
+    return jsonify({"status": "success", "fixed_code": fixed_code})
 
 @app.route('/api/feedback', methods=['POST'])
 @limiter.limit("30 per minute")
@@ -214,8 +227,9 @@ def feedback():
 @app.route('/api/report/<format>', methods=['GET'])
 def download_report(format):
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
-        filename, findings = db_manager.get_last_scan_report(session['username'])
+    filename, findings = db_manager.get_last_scan_report(session['username'])
     if not filename: return "Сначала выполните сканирование", 400
+        
     score, grade = calculate_score(findings)
         
     if format == 'json':
@@ -228,17 +242,6 @@ def download_report(format):
         pdf_bytes = ReportGenerator.generate_pdf(findings, filename, score, grade)
         return Response(pdf_bytes, mimetype='application/pdf', headers={'Content-Disposition': f'attachment;filename=report.pdf'})
     return "Неверный формат", 400
-
-@app.route('/api/fix', methods=['POST'])
-@limiter.limit("5 per minute")
-def ai_fix():
-    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
-    data = request.get_json()
-    code = data.get('code')
-    issue = data.get('issue')
-    if not code or not issue: return jsonify({"error": "Нет данных"}), 400
-    fixed_code = ai_scanner.generate_fix(code, issue)
-    return jsonify({"status": "success", "fixed_code": fixed_code})
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)
