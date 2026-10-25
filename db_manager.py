@@ -53,7 +53,7 @@ def init_db():
 def create_user(username, password_hash, email):
     conn = get_db()
     try:
-        conn.execute("INSERT INTO users (username, password_hash, email, is_verified, plan) VALUES (?, ?, ?, 0, 'pro')", (username, password_hash, email))
+        conn.execute("INSERT INTO users (username, password_hash, email, is_verified, plan) VALUES (?, ?, ?, 1, 'pro')", (username, password_hash, email))
         conn.commit()
         return True
     except sqlite3.IntegrityError: return False

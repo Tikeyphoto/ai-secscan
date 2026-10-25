@@ -111,7 +111,7 @@ def register():
         if db_manager.create_user(username, generate_password_hash(password), email):
             verify_link = f"http://127.0.0.1:8080/verify/{username}"
             print(f"\n[EMAIL] Письмо для {email}:\nПодтвердите аккаунт: {verify_link}\n", flush=True)
-            return render_template('login.html', error="Аккаунт создан! Проверьте логи Docker для ссылки подтверждения.")
+            return render_template('login.html', error="Аккаунт успешно создан! Теперь вы можете войти.")
         return render_template('register.html', error="Пользователь уже существует")
     return render_template('register.html')
 
@@ -128,9 +128,7 @@ def login():
         user = db_manager.get_user(username)
         
         if user and check_password_hash(user['password_hash'], password):
-            if not user['is_verified']:
-                return render_template('login.html', error="Пожалуйста, подтвердите email. Ссылка в логах Docker.")
-            
+                        
             if user['totp_secret']:
                 session['pending_2fa_user'] = username
                 return redirect(url_for('verify_2fa'))

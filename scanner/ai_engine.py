@@ -7,7 +7,7 @@ import os
 class AIEngine:
     def __init__(self, model_name="qwen2.5-coder:7b"):
         self.model_name = model_name
-        self.api_url = os.environ.get("OLLAMA_API_URL", "http://host.docker.internal:11434/api/generate")
+        self.api_url = os.environ.get("OLLAMA_API_URL", "http://ollama:11434/api/generate")
 
     def _chunk_code(self, code: str, max_lines=100):
         chunks = []

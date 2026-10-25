@@ -1,10 +1,21 @@
-﻿services:
+services:
   web:
     build: .
     ports:
       - "8080:8000"
     volumes:
       - ./data:/app/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_API_URL=http://ollama:11434/api/generate
+    restart: always
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: always
+
+volumes:
+  ollama_data:
