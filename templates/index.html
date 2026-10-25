@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI-SecScan SaaS</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #313244; padding-bottom: 10px; margin-bottom: 20px; }
+        h1 { color: #89b4fa; margin: 0; }
+        .user-info { background: #313244; padding: 10px; border-radius: 5px; font-size: 14px; display: flex; align-items: center; }
+        .btn-logout { background: #f38ba8; color: #1e1e2e; padding: 5px 10px; text-decoration: none; border-radius: 3px; font-weight: bold; margin-left: 15px; }
+        
+        /* Блок AI-переключателя */
+        .ai-toggle-box { background: #313244; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #cba6f7; display: flex; align-items: center; }
+        .ai-toggle-box input { transform: scale(1.5); margin-right: 15px; cursor: pointer; }
+        .ai-toggle-box label { color: #cba6f7; font-weight: bold; cursor: pointer; font-size: 16px; }
+        
+        .upload-section { background: #313244; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px dashed #89b4fa; }
+        textarea { width: 100%; height: 200px; background: #313244; color: #a6e3a1; border: 1px solid #45475a; padding: 10px; font-family: monospace; border-radius: 5px; }
+        button { background: #89b4fa; color: #1e1e2e; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: 10px; }
+        .finding { background: #313244; padding: 15px; margin-bottom: 15px; border-radius: 5px; border-left: 5px solid #f38ba8; }
+        .finding.HIGH { border-left-color: #f9e2af; }
+        .finding.MEDIUM { border-left-color: #f9e2af; }
+        .finding.AI_LOGIC_FLAW { border-left-color: #cba6f7; }
+        .code { font-family: monospace; background: #11111b; padding: 5px; border-radius: 3px; display: block; margin-top: 5px; }
+        .btn-feedback { padding: 5px 10px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; }
+        .btn-tp { background: #a6e3a1; color: #1e1e2e; }
+        .btn-fp { background: #f38ba8; color: #1e1e2e; }
+        .error-box { background: #f38ba8; color: #11111b; padding: 15px; border-radius: 5px; font-weight: bold; border-left: 5px solid #d20f39; margin-bottom: 15px;}
+        .btn-report { color: #1e1e2e; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin-right: 10px; }
+        .link-pro { color: #1e1e2e; text-decoration: underline; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ AI-SecScan SaaS</h1>
+            <div class="user-info">
+                👤 {{ user['username'] }} 
+                <a href="/profile" style="color: #89b4fa; text-decoration: none; margin-left: 15px;">Мой профиль</a>
+                <a href="/logout" class="btn-logout">Выйти</a>
+            </div>
+        </div>
+        
+        <!-- Перенесли галочку AI наверх -->
+        <div class="ai-toggle-box">
+            <input type="checkbox" id="useAi">
+            <label for="useAi">Включить глубокий AI-анализ (LLM) для поиска логических уязвимостей</label>
+        </div>
+
+        <div class="upload-section">
+            <p>📁 Загрузите файл или <b>ZIP-архив</b> (Поддерживается поиск секретов в .env, .json, .yml):</p>
+            <input type="file" id="fileInput" accept=".zip,.py,.js,.php,.java,.ts,.env,.yml,.yaml,.json,.txt,.cfg,.ini,.xml">
+            <button onclick="scanFile()">Сканировать файл</button>
+        </div>
+
+        <p>Или вставьте код вручную:</p>
+        <textarea id="codeInput" placeholder="Вставьте код сюда..."></textarea>
+        <button onclick="scanCode()">Сканировать текст</button>
+        
+        <div id="results" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', loadLastScan);
+
+                async function loadLastScan() {
+            try {
+                const response = await fetch('/api/last_scan');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    handleResponse(data, true); // true = это историческое сканирование
+                }
+            } catch (e) { console.log("Нет предыдущих сканирований"); }
+        }
+
+        function showLoading() {
+            document.getElementById('results').innerHTML = '<p>⏳ Анализ... (если включен AI, это может занять до 30 секунд)</p>';
+        }
+
+        function handleError(status, data) {
+            const resultsDiv = document.getElementById('results');
+            let errorMsg = data.error || `HTTP ${status}`;
+            if (status === 403) {
+                resultsDiv.innerHTML = `<div class="error-box">⚠️ ${errorMsg} <br><br><a href="/profile" class="link-pro">Перейти в профиль, чтобы сменить тариф →</a></div>`;
+            } else {
+                resultsDiv.innerHTML = `<div class="error-box">Ошибка: ${errorMsg}</div>`;
+            }
+        }
+
+        async function scanFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files.length) return alert("Выберите файл!");
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('use_ai', document.getElementById('useAi').checked);
+            
+            showLoading();
+            try {
+                const response = await fetch('/api/scan', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) { handleError(response.status, data); return; }
+                handleResponse(data);
+            } catch (e) { document.getElementById('results').innerHTML = `<div class="error-box">Ошибка сети: ${e.message}</div>`; }
+        }
+
+        async function scanCode() {
+            const code = document.getElementById('codeInput').value;
+            if (!code.trim()) return alert("Введите код!");
+            
+            showLoading();
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        code: code, 
+                        use_ai: document.getElementById('useAi').checked 
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) { handleError(response.status, data); return; }
+                handleResponse(data);
+            } catch (e) { document.getElementById('results').innerHTML = `<div class="error-box">Ошибка сети: ${e.message}</div>`; }
+        }
+
+        function handleResponse(data, isHistorical = false) {
+            const resultsDiv = document.getElementById('results');
+            
+            const errors = data.findings.filter(f => f.error);
+            const validFindings = data.findings.filter(f => !f.error && f.weight > 0.0);
+
+            let html = '';
+            if (!isHistorical && data.scans_left !== undefined) {
+                html += `<p style="color: #f9e2af;">Осталось сканирований на сегодня: ${data.scans_left}</p>`;
+            } else if (isHistorical) {
+                html += `<p style="color: #a6adc8; font-size: 14px;">📌 Результаты последнего сканирования (загружено из истории)</p>`;
+            }
+            
+            errors.forEach(e => {
+                html += `<div class="error-box">🚫 ${e.error}</div>`;
+            });
+
+            html += `
+            <div style="margin-top: 15px; margin-bottom: 15px;">
+                <a href="/api/report/pdf" class="btn-report" style="background:#f38ba8;">📄 Скачать PDF</a>
+                <a href="/api/report/json" class="btn-report" style="background:#a6e3a1;">💻 Скачать JSON</a>
+                <a href="/api/report/sarif" class="btn-report" style="background:#89b4fa;">🛡️ Скачать SARIF</a>
+            </div>`;
+
+            if (validFindings.length === 0) {
+                resultsDiv.innerHTML = html + '<p style="color:#a6e3a1; font-size: 18px;">✅ Уязвимостей не найдено!</p>';
+                return;
+            }
+            
+            html += `<h3>Файл: ${data.filename} | Найдено проблем: ${validFindings.length}</h3>`;
+            validFindings.forEach((f, index) => {
+                const isAi = f.rule_id === 'AI_LOGIC_FLAW';
+                const aiColor = isAi ? '#cba6f7' : '#f38ba8';
+                
+                html += `
+                <div class="finding ${f.severity} ${isAi ? 'AI_LOGIC_FLAW' : ''}">
+                    <b style="color: ${aiColor};">[${f.severity}] ${f.rule_id}</b> (${f.file || data.filename} : строка ${f.line}) - Вес: <span id="weight-${index}">${f.weight}</span>
+                    <p>${f.message}</p>
+                    <span class="code">${f.code}</span>
+                    <div style="margin-top: 10px;">
+                        <button class="btn-feedback btn-tp" onclick="sendFeedback('${f.rule_id}', true, ${index}, '${f.id}')">✅ Реальная</button>
+                        <button class="btn-feedback btn-fp" onclick="sendFeedback('${f.rule_id}', false, ${index}, '${f.id}')">❌ Ложная</button>
+                    </div>
+                </div>`;
+            });
+            resultsDiv.innerHTML = html;
+        }
+
+        async function sendFeedback(ruleId, isTp, index, findingHash) {
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rule_id: ruleId, is_tp: isTp, finding_hash: findingHash })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    document.getElementById(`weight-${index}`).innerText = data.new_weight;
+                    if (!isTp) {
+                        document.getElementById(`weight-${index}`).closest('.finding').style.display = 'none';
+                    }
+                }
+            } catch (e) { console.error("Ошибка", e); }
+        }
+    </script>
+</body>
+</html>

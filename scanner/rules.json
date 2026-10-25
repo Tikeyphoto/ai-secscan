@@ -1,0 +1,20 @@
+[
+  { "id": "PY_EVAL", "severity": "HIGH", "pattern": "eval", "message": "Использование eval() опасно.", "type": "function_call" },
+  { "id": "PY_EXEC", "severity": "HIGH", "pattern": "exec", "message": "Использование exec() опасно.", "type": "function_call" },
+  { "id": "PY_OS_SYSTEM", "severity": "CRITICAL", "pattern": "os.system", "message": "Использование os.system() уязвимо к инъекции команд.", "type": "function_call" },
+  { "id": "SQL_RAW_FORMAT", "severity": "CRITICAL", "pattern": "execute", "message": "SQL-инъекция через f-string/.format.", "type": "ast_call_check_sql" },
+  { "id": "XSS_RENDER_TEMPLATE_STRING", "severity": "CRITICAL", "pattern": "render_template_string", "message": "XSS через render_template_string.", "type": "function_call" },
+  { "id": "PY_HASH_MD5", "severity": "MEDIUM", "pattern": "hashlib.md5", "message": "MD5 криптографически сломан.", "type": "function_call" },
+  { "id": "PY_YAML_LOAD", "severity": "HIGH", "pattern": "yaml.load", "message": "yaml.load() уязвим к RCE.", "type": "function_call" },
+  
+  { "id": "JS_EVAL", "severity": "CRITICAL", "pattern": "eval\\s*\\(", "message": "JS eval() позволяет выполнить произвольный код.", "type": "regex" },
+  { "id": "JS_INNER_HTML", "severity": "HIGH", "pattern": "\\.innerHTML\\s*=", "message": "Запись в innerHTML может привести к XSS.", "type": "regex" },
+  { "id": "JS_DANGEROUSLY_SET_HTML", "severity": "HIGH", "pattern": "dangerouslySetInnerHTML", "message": "React dangerouslySetInnerHTML ведет к XSS.", "type": "regex" },
+  { "id": "PHP_EVAL", "severity": "CRITICAL", "pattern": "eval\\s*\\(", "message": "PHP eval() позволяет выполнить произвольный код.", "type": "regex" },
+  
+  { "id": "SECRET_AWS_KEY", "severity": "CRITICAL", "pattern": "AKIA[0-9A-Z]{16}", "message": "Обнаружен ключ доступа AWS! Немедленно отзовите его.", "type": "regex" },
+  { "id": "SECRET_TELEGRAM_BOT", "severity": "HIGH", "pattern": "[0-9]{8,10}:[a-zA-Z0-9_-]{35}", "message": "Обнаружен токен Telegram-бота.", "type": "regex" },
+  { "id": "SECRET_STRIPE_KEY", "severity": "CRITICAL", "pattern": "sk_live_[0-9a-zA-Z]{24}", "message": "Обнаружен секретный ключ Stripe (Live).", "type": "regex" },
+  { "id": "SECRET_PRIVATE_KEY", "severity": "CRITICAL", "pattern": "-----BEGIN (RSA|OPENSSH|DSA) PRIVATE KEY-----", "message": "Обнаружен приватный ключ SSH/RSA.", "type": "regex" },
+  { "id": "SECRET_GENERIC_PASSWORD", "severity": "HIGH", "pattern": "(password|passwd|pwd|secret|api_key|token|auth)\\s*[:=]\\s*['\"]?([^'\"\\s]+)['\"]?", "message": "Обнаружен захардкоженный пароль или секрет.", "type": "regex", "ignore_case": true }
+]

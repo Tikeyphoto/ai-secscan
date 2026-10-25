@@ -1,0 +1,32 @@
+﻿[
+  {
+    "package": "flask",
+    "vulnerable_below": "3.0.0",
+    "cve": "CVE-2023-30861",
+    "message": "Уязвимость сессий в Flask. Рекомендуется обновление."
+  },
+  {
+    "package": "requests",
+    "vulnerable_below": "2.31.0",
+    "cve": "CVE-2023-32681",
+    "message": "Утечка заголовка Proxy-Authorization при редиректах."
+  },
+  {
+    "package": "django",
+    "vulnerable_below": "4.2.0",
+    "cve": "CVE-2023-31047",
+    "message": "Обход валидации при загрузке файлов в Django."
+  },
+  {
+    "package": "pillow",
+    "vulnerable_below": "9.3.0",
+    "cve": "CVE-2023-44271",
+    "message": "Отказ в обслуживании (DoS) при обработке изображений."
+  },
+  {
+    "package": "pyyaml",
+    "vulnerable_below": "6.0.1",
+    "cve": "CVE-2020-14343",
+    "message": "Выполнение произвольного кода через yaml.load()."
+  }
+]

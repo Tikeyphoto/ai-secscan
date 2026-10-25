@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Мой Профиль - AI-SecScan</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #cdd6f4; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #313244; padding-bottom: 10px; margin-bottom: 20px; }
+        h1 { color: #89b4fa; margin: 0; }
+        .card { background: #313244; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .btn { background: #89b4fa; color: #1e1e2e; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; border: none; cursor: pointer; }
+        .btn-pro { background: #f9e2af; }
+        .btn-back { background: #a6adc8; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #45475a; }
+        th { color: #89b4fa; }
+        .flash { background: #a6e3a1; color: #1e1e2e; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👤 Профиль: {{ user['username'] }}</h1>
+            <a href="/" class="btn btn-back">← На главную</a>
+        </div>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}{% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endif %}
+        {% endwith %}
+        <div class="card">
+            <h2>Ваш тариф: <span style="color: {{ '#f9e2af' if user['plan'] == 'pro' else '#a6adc8' }}">{{ (user['plan'] or 'FREE') | upper }}</span></h2>
+            {% if user['plan'] == 'free' %}
+                <p>Дневной лимит: 5 сканирований.</p>
+                <form action="/upgrade" method="POST">
+                    <button type="submit" class="btn btn-pro">⭐ Перейти на Pro (Безлимит)</button>
+                </form>
+            {% else %}
+                <p>У вас неограниченный доступ к сканированиям. Спасибо за поддержку!</p>
+            {% endif %}
+        </div>
+        <div class="card">
+            <h2>История последних сканирований</h2>
+            {% if history %}
+                <table>
+                    <tr><th>Файл</th><th>Дата</th><th>Найдено проблем</th></tr>
+                    {% for scan in history %}
+                    <tr>
+                        <td>{{ scan['filename'] }}</td>
+                        <td>{{ scan['timestamp'] }}</td>
+                        <td>{{ scan['findings_count'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>Вы еще не загружали файлы.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
