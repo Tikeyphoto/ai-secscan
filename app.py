@@ -788,5 +788,49 @@ def yandex_verify():
     return Response(html, mimetype='text/html')
 
 
+
+@app.route('/api/generate_github_action')
+def generate_github_action():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    
+    yaml_template = """name: AI-SecScan
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Zip Project
+        run: zip -r project.zip . -x "*.git*" -x "venv/*" -x "node_modules/*"
+
+      - name: Run AI-SecScan
+        env:
+          API_KEY: ${{ secrets.AISECSCAN_API_KEY }}
+        run: |
+          RESPONSE=$(curl -s -X POST https://aisecscan.by/api/scan \
+            -H "Authorization: Bearer \$API_KEY" \
+            -F "file=@project.zip")
+          
+          echo "Scan Result: \$RESPONSE"
+          
+          CRITICAL=$(echo "\$RESPONSE" | jq '[.findings[] | select(.severity=="CRITICAL")] | length')
+          
+          if [ "\$CRITICAL" -gt 0 ]; then
+            echo "::error::Найдено критических уязвимостей: \$CRITICAL. Сборка остановлена."
+            exit 1
+          fi
+          
+          echo "Проверка пройдена!"
+"""
+    return jsonify({"yaml": yaml_template})
+
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)

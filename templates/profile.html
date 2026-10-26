@@ -77,6 +77,42 @@
             });
         }
         document.addEventListener('DOMContentLoaded', updateThemeIcon);
+
+        
+, 2000);
+            });
+        }
+
+
+        
+
+
+        
+
+
+        async function generateGitHubAction() {
+            try {
+                const res = await fetch('/api/generate_github_action');
+                const data = await res.json();
+                if (data.error) { alert(data.error); return; }
+                document.getElementById('yamlContainer').style.display = 'block';
+                document.getElementById('copyYamlBtn').style.display = 'inline-flex';
+                document.getElementById('yamlContent').textContent = data.yaml;
+            } catch (e) {
+                alert("Ошибка сети: " + e.message);
+            }
+        }
+        
+        function copyYaml() {
+            const text = document.getElementById('yamlContent').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copyYamlBtn');
+                const original = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Скопировано!';
+                setTimeout(() => { btn.innerHTML = original; }, 2000);
+            });
+        }
+
     </script>
         <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 </head>
@@ -283,7 +319,31 @@
                 </div>
             </div>
 
-            <!-- 4. WEBHOOKS -->
+            
+                
+                
+                
+                <!-- GitHub Actions Integration -->
+                <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border);">
+                    <h3><i class="fa-brands fa-github"></i> Интеграция с GitHub Actions</h3>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 15px;">
+                        Автоматически проверяйте код на уязвимости при каждом коммите. Просто добавьте файл <code>.github/workflows/secscan.yml</code> в ваш репозиторий.
+                    </p>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <button class="btn" onclick="generateGitHubAction()" style="background: #24292e; border: 1px solid #444c56;"><i class="fa-brands fa-github"></i> Сгенерировать YAML</button>
+                        <button class="btn" id="copyYamlBtn" onclick="copyYaml()" style="display: none; background: var(--success); color: #11111b;"><i class="fa-solid fa-copy"></i> Скопировать</button>
+                    </div>
+                    
+                    <div id="yamlContainer" style="display: none;">
+                        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 13px; color: var(--warning);">
+                            <i class="fa-solid fa-circle-exclamation"></i> <b>Важно:</b> Добавьте ваш API-ключ в настройках репозитория под именем <code>AISECSCAN_API_KEY</code>.
+                        </div>
+                        <pre id="yamlContent" style="background: #000; color: #a6e3a1; padding: 15px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; overflow-x: auto; white-space: pre; border: 1px solid var(--border);"></pre>
+                    </div>
+                </div>
+
+<!-- 4. WEBHOOKS -->
             <div id="tab-webhooks" class="tab-content">
                 <h2><i class="fa-solid fa-link"></i> {{ t('profile.webhook_title') }}</h2>
                 <p style="color: var(--text-muted);">{{ t('profile.webhook_desc') }}</p>
@@ -909,6 +969,39 @@
             await fetch(`/api/rules/${id}`, { method: 'DELETE' });
             location.reload();
         }
+
+        
+
+
+        
+
+
+        
+
+
+        async function generateGitHubAction() {
+            try {
+                const res = await fetch('/api/generate_github_action');
+                const data = await res.json();
+                if (data.error) { alert(data.error); return; }
+                document.getElementById('yamlContainer').style.display = 'block';
+                document.getElementById('copyYamlBtn').style.display = 'inline-flex';
+                document.getElementById('yamlContent').textContent = data.yaml;
+            } catch (e) {
+                alert("Ошибка сети: " + e.message);
+            }
+        }
+        
+        function copyYaml() {
+            const text = document.getElementById('yamlContent').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copyYamlBtn');
+                const original = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Скопировано!';
+                setTimeout(() => { btn.innerHTML = original; }, 2000);
+            });
+        }
+
     </script>
 </body>
 </html>
