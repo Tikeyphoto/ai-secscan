@@ -32,7 +32,18 @@ app.secret_key = 'super_secret_key_for_dev'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 swagger = Swagger(app, template={'info': {'title': 'AI-SecScan API', 'description': 'API для сканирования кода', 'version': '1.0.0'}})
 
-limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"], storage_uri="memory://")
+import os as _os
+_redis_url = _os.environ.get("REDIS_URL", "redis://redis:6379/0")
+try:
+    import redis as _redis_mod
+    _redis_client = _redis_mod.Redis.from_url(_redis_url, socket_connect_timeout=2, socket_timeout=2)
+    _redis_client.ping()
+    _limiter_storage = _redis_url
+    print(f"[limiter] Using Redis storage: {_redis_url}", flush=True)
+except Exception as _e:
+    _limiter_storage = "memory://"
+    print(f"[limiter] Redis unavailable ({_e}), falling back to memory://", flush=True)
+limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"], storage_uri=_limiter_storage)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RULES_FILE = os.path.join(BASE_DIR, "scanner", "rules.json")
@@ -119,28 +130,106 @@ SMTP_PORT = 587
 SMTP_LOGIN = "no-reply@aisecscan.by"
 SMTP_PASSWORD = "_UQk)tjR87Zn"
 FROM_EMAIL = "info@aisecscan.by"
+
+# --- SENDPULSE HTTP API (порт 443) ---
+SENDPULSE_CLIENT_ID = os.environ.get("SENDPULSE_CLIENT_ID", "")
+SENDPULSE_CLIENT_SECRET = os.environ.get("SENDPULSE_CLIENT_SECRET", "")
 DOMAIN_URL = "https://aisecscan.by"
 
+def _get_redis_for_email():
+    """Возвращает Redis-клиент или None, если недоступен."""
+    try:
+        import redis
+        url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+        r = redis.Redis.from_url(url, socket_connect_timeout=2, socket_timeout=2)
+        r.ping()
+        return r
+    except Exception:
+        return None
+
+
+def _get_sendpulse_token():
+    """Получает access_token из кэша Redis или запрашивает новый у SendPulse."""
+    r = _get_redis_for_email()
+    cache_key = "sendpulse:access_token"
+    if r:
+        cached = r.get(cache_key)
+        if cached:
+            return cached.decode() if isinstance(cached, bytes) else cached
+
+    resp = requests.post(
+        "https://api.sendpulse.com/oauth/access_token",
+        json={
+            "grant_type": "client_credentials",
+            "client_id": SENDPULSE_CLIENT_ID,
+            "client_secret": SENDPULSE_CLIENT_SECRET,
+        },
+        timeout=10,
+    )
+    resp.raise_for_status()
+    token = resp.json()["access_token"]
+    if r:
+        r.setex(cache_key, 3500, token)  # ~58 минут
+    return token
+
+
+def send_email_via_sendpulse(to_email, subject, body_text):
+    """Отправляет письмо через SendPulse HTTP API (порт 443)."""
+    token = _get_sendpulse_token()
+    payload = {
+        "email": {
+            "subject": subject,
+            "from": {"name": "AI-SecScan", "email": "no-reply@aisecscan.by"},
+            "to": [{"name": "", "email": to_email}],
+            "text": body_text,
+        }
+    }
+    resp = requests.post(
+        "https://api.sendpulse.com/smtp/emails",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=15,
+    )
+    if resp.status_code >= 400:
+        raise Exception(f"SendPulse API {resp.status_code}: {resp.text}")
+    return resp.json()
+
+
 def send_email_async(to_email, subject, body_text):
+    """Асинхронная отправка: сначала SendPulse API, при ошибке — SMTP fallback."""
     def _send():
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        msg = MIMEMultipart()
-        msg['From'] = f"AI-SecScan <AI-SecScan <no-reply@aisecscan.by>>"
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body_text, 'plain', 'utf-8'))
+        # 1) SendPulse HTTP API
+        if SENDPULSE_CLIENT_ID and SENDPULSE_CLIENT_SECRET:
+            try:
+                send_email_via_sendpulse(to_email, subject, body_text)
+                print(f"[EMAIL SUCCESS] SendPulse API -> {to_email}", flush=True)
+                return
+            except Exception as e:
+                print(f"[EMAIL ERROR] SendPulse API: {e}", flush=True)
+
+        # 2) SMTP fallback
         try:
-            print(f"[EMAIL START] Попытка отправки на {to_email}", flush=True)
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            msg = MIMEMultipart()
+            msg["From"] = "AI-SecScan <no-reply@aisecscan.by>"
+            msg["To"] = to_email
+            msg["Subject"] = subject
+            msg.attach(MIMEText(body_text, "plain", "utf-8"))
             with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
                 server.starttls()
                 server.login(SMTP_LOGIN, SMTP_PASSWORD)
                 server.send_message(msg)
-            print(f"[EMAIL SUCCESS] Письмо отправлено на {to_email}", flush=True)
+            print(f"[EMAIL SUCCESS] SMTP fallback -> {to_email}", flush=True)
         except Exception as e:
-            print(f"[EMAIL ERROR] Не удалось отправить письмо: {e}", flush=True)
+            print(f"[EMAIL ERROR] SMTP fallback: {e}", flush=True)
+
     threading.Thread(target=_send, daemon=True).start()
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -171,24 +260,56 @@ def verify(username):
     db_manager.verify_user_email(username)
     return render_template('login.html', error="Аккаунт успешно подтвержден! Теперь вы можете войти.")
 
+@app.route('/resend_verification')
+def resend_verification():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return redirect(url_for('login'))
+    user = db_manager.get_user(username)
+    if not user:
+        return render_template('login.html', error="Пользователь с таким именем не найден.")
+    if user['is_verified']:
+        return render_template('login.html', error="Этот email уже подтверждён. Можете войти.")
+    verify_link = f"{DOMAIN_URL}/verify/{username}"
+    email_body = (
+        f"Здравствуйте, {username}!\n\n"
+        f"Вы запросили повторную отправку ссылки для подтверждения email в AI-SecScan.\n\n"
+        f"Ссылка для подтверждения:\n{verify_link}\n\n"
+        f"--\nКоманда AI-SecScan\nhttps://aisecscan.by"
+    )
+    try:
+        send_email_async(user['email'], "AI-SecScan: Повторное подтверждение email", email_body)
+    except Exception as e:
+        print(f"[RESEND] failed: {e}", flush=True)
+        return render_template('login.html', error=f"Не удалось отправить письмо: {e}")
+    return render_template('login.html', error="Письмо отправлено повторно. Проверьте почту (и папку Спам).")
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         user = db_manager.get_user(username)
-        
+
         if user and check_password_hash(user['password_hash'], password):
-                        
+
+            if not user['is_verified']:
+                return render_template(
+                    'login.html',
+                    error=f"Email не подтверждён. Проверьте почту или <a href='/resend_verification?username={username}'>отправьте письмо повторно</a>."
+                )
+
             if user['totp_secret']:
                 session['pending_2fa_user'] = username
                 return redirect(url_for('verify_2fa'))
-                
+
             session['username'] = username
             return redirect(url_for('profile'))
-            
+
         return render_template('login.html', error="Неверный логин или пароль")
     return render_template('login.html')
+
 
 @app.route('/verify_2fa', methods=['GET', 'POST'])
 def verify_2fa():

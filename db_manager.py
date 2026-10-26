@@ -4,14 +4,119 @@ import json
 import uuid
 from datetime import date
 
+# ============ POSTGRES ADAPTER ============
+import os as _os
+
+try:
+    import psycopg2 as _psycopg2
+    import psycopg2.extras as _psycopg2_extras
+    _PG_AVAILABLE = True
+except ImportError:
+    _psycopg2 = None
+    _psycopg2_extras = None
+    _PG_AVAILABLE = False
+
+_USE_POSTGRES = _os.environ.get("USE_POSTGRES", "false").lower() in ("1", "true", "yes") and _PG_AVAILABLE
+if _os.environ.get("USE_POSTGRES", "false").lower() in ("1", "true", "yes") and not _PG_AVAILABLE:
+    print("[db] WARNING: USE_POSTGRES=true but psycopg2 not installed; falling back to SQLite", flush=True)
+
+
+def _convert_query(q):
+    """Convert ? placeholders to %s (escape literal % first)."""
+    return q.replace("%", "%%").replace("?", "%s")
+
+
+class _PGCursor:
+    def __init__(self, pg_cur):
+        self._c = pg_cur
+
+    def execute(self, q, p=()):
+        self._c.execute(_convert_query(q), p)
+        return self
+
+    def fetchone(self):
+        return self._c.fetchone()
+
+    def fetchall(self):
+        return self._c.fetchall()
+
+    def close(self):
+        self._c.close()
+
+
+class _PGConnection:
+    def __init__(self, pg_conn):
+        self._c = pg_conn
+
+    def execute(self, q, p=()):
+        cur = self._c.cursor(cursor_factory=_psycopg2_extras.DictCursor)
+        try:
+            cur.execute(_convert_query(q), p)
+        except _psycopg2.IntegrityError as e:
+            raise sqlite3.IntegrityError(str(e))
+        return cur
+
+    def cursor(self):
+        cur = self._c.cursor(cursor_factory=_psycopg2_extras.DictCursor)
+        return _PGCursor(cur)
+
+    def commit(self):
+        self._c.commit()
+
+    def close(self):
+        self._c.close()
+
+
+def _get_db_postgres():
+    conn = _psycopg2.connect(
+        host=_os.environ.get("POSTGRES_HOST", "postgres"),
+        port=int(_os.environ.get("POSTGRES_PORT", "5432")),
+        user=_os.environ.get("POSTGRES_USER"),
+        password=_os.environ.get("POSTGRES_PASSWORD"),
+        dbname=_os.environ.get("POSTGRES_DB"),
+        connect_timeout=10,
+    )
+    return _PGConnection(conn)
+# ============ END POSTGRES ADAPTER ============
+
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "secscan.db")
 
 def get_db():
+    if _USE_POSTGRES:
+        return _get_db_postgres()
     conn = sqlite3.connect(DB_PATH, timeout=20)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
+    if _USE_POSTGRES:
+        return _init_db_postgres()
+    return _init_db_sqlite()
+
+
+def _init_db_postgres():
+    conn = _get_db_postgres()
+    try:
+        cur = conn._c.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS users (id BIGSERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE, api_key TEXT, webhook_url TEXT, email TEXT, is_verified INTEGER DEFAULT 1, totp_secret TEXT, is_admin INTEGER DEFAULT 0)")
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_api_key ON users(api_key)")
+        cur.execute("CREATE TABLE IF NOT EXISTS api_keys (id BIGSERIAL PRIMARY KEY, username TEXT, api_key TEXT UNIQUE, name TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        cur.execute("CREATE TABLE IF NOT EXISTS weights (rule_id TEXT PRIMARY KEY, weight REAL DEFAULT 1.0, tp INTEGER DEFAULT 0, fp INTEGER DEFAULT 0)")
+        cur.execute("CREATE TABLE IF NOT EXISTS scans (id BIGSERIAL PRIMARY KEY, username TEXT, filename TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, findings_count INTEGER)")
+        cur.execute("CREATE TABLE IF NOT EXISTS scan_reports (username TEXT PRIMARY KEY, filename TEXT, findings_json TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        cur.execute("CREATE TABLE IF NOT EXISTS user_baselines (username TEXT, finding_hash TEXT, status TEXT, PRIMARY KEY(username, finding_hash))")
+        cur.execute("CREATE TABLE IF NOT EXISTS custom_rules (id BIGSERIAL PRIMARY KEY, username TEXT, rule_id TEXT, severity TEXT, pattern TEXT, message TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS invite_codes (id BIGSERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL, plan TEXT DEFAULT 'pro', created_by TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, used_by TEXT, used_at TIMESTAMP, expires_at TIMESTAMP, max_uses INTEGER DEFAULT 1, current_uses INTEGER DEFAULT 0)")
+        cur.execute("CREATE TABLE IF NOT EXISTS sboms (username TEXT PRIMARY KEY, filename TEXT, sbom_json TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        conn.commit()
+        cur.close()
+        print("[db] Postgres schema initialized", flush=True)
+    finally:
+        conn.close()
+
+
+def _init_db_sqlite():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_db()
     try:

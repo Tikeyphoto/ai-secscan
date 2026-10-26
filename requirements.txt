@@ -1,10 +1,12 @@
-﻿flask==3.0.0
+flask==3.0.0
 werkzeug==3.0.1
 gunicorn==21.2.0
-flask-limiter==3.5.0
+flask-limiter[redis]==3.5.0
 fpdf2==2.7.6
 requests==2.31.0
 packaging==23.2
 pyotp==2.9.0
 qrcode[pil]==7.4.2
 flasgger==0.9.7.1
+redis==5.0.1
+psycopg2-binary==2.9.9

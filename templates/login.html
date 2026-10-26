@@ -39,7 +39,7 @@
                 {% endfor %}
               {% endif %}
             {% endwith %}
-            {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+            {% if error %}<div class="error-msg">{{ error|safe }}</div>{% endif %}
             <form method="POST">
                 <input type="text" name="username" placeholder="Логин" required>
                 <input type="password" name="password" placeholder="Пароль" required>

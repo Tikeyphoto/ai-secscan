@@ -1,25 +1,208 @@
 ﻿[
-  { "id": "PY_EVAL", "severity": "HIGH", "pattern": "eval", "message": "Использование eval() опасно.", "type": "function_call" },
-  { "id": "PY_EXEC", "severity": "HIGH", "pattern": "exec", "message": "Использование exec() опасно.", "type": "function_call" },
-  { "id": "PY_OS_SYSTEM", "severity": "CRITICAL", "pattern": "os.system", "message": "Использование os.system() уязвимо к инъекции команд.", "type": "function_call" },
-  { "id": "SQL_RAW_FORMAT", "severity": "CRITICAL", "pattern": "execute", "message": "SQL-инъекция через f-string/.format.", "type": "ast_call_check_sql" },
-  { "id": "XSS_RENDER_TEMPLATE_STRING", "severity": "CRITICAL", "pattern": "render_template_string", "message": "XSS через render_template_string.", "type": "function_call" },
-  { "id": "PY_HASH_MD5", "severity": "MEDIUM", "pattern": "hashlib.md5", "message": "MD5 криптографически сломан.", "type": "function_call" },
-  { "id": "PY_YAML_LOAD", "severity": "HIGH", "pattern": "yaml.load", "message": "yaml.load() уязвим к RCE.", "type": "function_call" },
-  
-  { "id": "JS_EVAL", "severity": "CRITICAL", "pattern": "eval\\s*\\(", "message": "JS eval() позволяет выполнить произвольный код.", "type": "regex" },
-  { "id": "JS_INNER_HTML", "severity": "HIGH", "pattern": "\\.innerHTML\\s*=", "message": "Запись в innerHTML может привести к XSS.", "type": "regex" },
-  { "id": "JS_DANGEROUSLY_SET_HTML", "severity": "HIGH", "pattern": "dangerouslySetInnerHTML", "message": "React dangerouslySetInnerHTML ведет к XSS.", "type": "regex" },
-  { "id": "PHP_EVAL", "severity": "CRITICAL", "pattern": "eval\\s*\\(", "message": "PHP eval() позволяет выполнить произвольный код.", "type": "regex" },
-  
-  { "id": "SECRET_AWS_KEY", "severity": "CRITICAL", "pattern": "AKIA[0-9A-Z]{16}", "message": "Обнаружен ключ доступа AWS! Немедленно отзовите его.", "type": "regex" },
-  { "id": "SECRET_TELEGRAM_BOT", "severity": "HIGH", "pattern": "[0-9]{8,10}:[a-zA-Z0-9_-]{35}", "message": "Обнаружен токен Telegram-бота.", "type": "regex" },
-  { "id": "SECRET_STRIPE_KEY", "severity": "CRITICAL", "pattern": "sk_live_[0-9a-zA-Z]{24}", "message": "Обнаружен секретный ключ Stripe (Live).", "type": "regex" },
-  { "id": "SECRET_PRIVATE_KEY", "severity": "CRITICAL", "pattern": "-----BEGIN (RSA|OPENSSH|DSA) PRIVATE KEY-----", "message": "Обнаружен приватный ключ SSH/RSA.", "type": "regex" },
-  { "id": "SECRET_GENERIC_PASSWORD", "severity": "HIGH", "pattern": "(password|passwd|pwd|secret|api_key|token|auth)\\s*[:=]\\s*['\"]?([^'\"\\s]+)['\"]?", "message": "Обнаружен захардкоженный пароль или секрет.", "type": "regex", "ignore_case": true },
-  
-  { "id": "DOCKER_ROOT_USER", "severity": "HIGH", "pattern": "^USER\\s+root", "message": "Dockerfile запускает контейнер от имени root. Создайте непривилегированного пользователя (USER appuser).", "type": "regex", "ignore_case": true },
-  { "id": "DOCKER_LATEST_TAG", "severity": "MEDIUM", "pattern": "^FROM\\s+.*:latest", "message": "Использование тега 'latest' для базового образа небезопасно. Укажите конкретную версию (например, python:3.11-slim).", "type": "regex", "ignore_case": true },
-  { "id": "DOCKER_EXPOSE_SSH", "severity": "CRITICAL", "pattern": "^EXPOSE\\s+22", "message": "В Dockerfile открыт SSH-порт (22). Это может привести к несанкционированному доступу.", "type": "regex", "ignore_case": true },
-  { "id": "DOCKER_ADD_REMOTE", "severity": "MEDIUM", "pattern": "^ADD\\s+http", "message": "Использование 'ADD' с удаленным URL может быть небезопасным. Используйте 'COPY' для локальных файлов.", "type": "regex", "ignore_case": true }
+    {
+        "id": "PY_EVAL",
+        "severity": "HIGH",
+        "pattern": "eval",
+        "message": "Использование eval() опасно.",
+        "type": "function_call"
+    },
+    {
+        "id": "PY_EXEC",
+        "severity": "HIGH",
+        "pattern": "exec",
+        "message": "Использование exec() опасно.",
+        "type": "function_call"
+    },
+    {
+        "id": "PY_OS_SYSTEM",
+        "severity": "CRITICAL",
+        "pattern": "os.system",
+        "message": "Использование os.system() уязвимо к инъекции команд.",
+        "type": "function_call"
+    },
+    {
+        "id": "SQL_RAW_FORMAT",
+        "severity": "CRITICAL",
+        "pattern": "execute",
+        "message": "SQL-инъекция через f-string/.format.",
+        "type": "ast_call_check_sql"
+    },
+    {
+        "id": "XSS_RENDER_TEMPLATE_STRING",
+        "severity": "CRITICAL",
+        "pattern": "render_template_string",
+        "message": "XSS через render_template_string.",
+        "type": "function_call"
+    },
+    {
+        "id": "PY_HASH_MD5",
+        "severity": "MEDIUM",
+        "pattern": "hashlib.md5",
+        "message": "MD5 криптографически сломан.",
+        "type": "function_call"
+    },
+    {
+        "id": "PY_YAML_LOAD",
+        "severity": "HIGH",
+        "pattern": "yaml.load",
+        "message": "yaml.load() уязвим к RCE.",
+        "type": "function_call"
+    },
+    {
+        "id": "JS_EVAL",
+        "severity": "CRITICAL",
+        "pattern": "eval\\s*\\(",
+        "message": "JS eval() позволяет выполнить произвольный код.",
+        "type": "regex"
+    },
+    {
+        "id": "JS_INNER_HTML",
+        "severity": "HIGH",
+        "pattern": "\\.innerHTML\\s*=",
+        "message": "Запись в innerHTML может привести к XSS.",
+        "type": "regex"
+    },
+    {
+        "id": "JS_DANGEROUSLY_SET_HTML",
+        "severity": "HIGH",
+        "pattern": "dangerouslySetInnerHTML",
+        "message": "React dangerouslySetInnerHTML ведет к XSS.",
+        "type": "regex"
+    },
+    {
+        "id": "PHP_EVAL",
+        "severity": "CRITICAL",
+        "pattern": "eval\\s*\\(",
+        "message": "PHP eval() позволяет выполнить произвольный код.",
+        "type": "regex"
+    },
+    {
+        "id": "SECRET_AWS_KEY",
+        "severity": "CRITICAL",
+        "pattern": "AKIA[0-9A-Z]{16}",
+        "message": "Обнаружен ключ доступа AWS! Немедленно отзовите его.",
+        "type": "regex"
+    },
+    {
+        "id": "SECRET_TELEGRAM_BOT",
+        "severity": "HIGH",
+        "pattern": "[0-9]{8,10}:[a-zA-Z0-9_-]{35}",
+        "message": "Обнаружен токен Telegram-бота.",
+        "type": "regex"
+    },
+    {
+        "id": "SECRET_STRIPE_KEY",
+        "severity": "CRITICAL",
+        "pattern": "sk_live_[0-9a-zA-Z]{24}",
+        "message": "Обнаружен секретный ключ Stripe (Live).",
+        "type": "regex"
+    },
+    {
+        "id": "SECRET_PRIVATE_KEY",
+        "severity": "CRITICAL",
+        "pattern": "-----BEGIN (RSA|OPENSSH|DSA) PRIVATE KEY-----",
+        "message": "Обнаружен приватный ключ SSH/RSA.",
+        "type": "regex"
+    },
+    {
+        "id": "SECRET_GENERIC_PASSWORD",
+        "severity": "HIGH",
+        "pattern": "(password|passwd|pwd|secret|api_key|token|auth)\\s*[:=]\\s*['\"]?([^'\"\\s]+)['\"]?",
+        "message": "Обнаружен захардкоженный пароль или секрет.",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "DOCKER_ROOT_USER",
+        "severity": "HIGH",
+        "pattern": "^USER\\s+root",
+        "message": "Dockerfile запускает контейнер от имени root. Создайте непривилегированного пользователя (USER appuser).",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "DOCKER_LATEST_TAG",
+        "severity": "MEDIUM",
+        "pattern": "^FROM\\s+.*:latest",
+        "message": "Использование тега 'latest' для базового образа небезопасно. Укажите конкретную версию (например, python:3.11-slim).",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "DOCKER_EXPOSE_SSH",
+        "severity": "CRITICAL",
+        "pattern": "^EXPOSE\\s+22",
+        "message": "В Dockerfile открыт SSH-порт (22). Это может привести к несанкционированному доступу.",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "DOCKER_ADD_REMOTE",
+        "severity": "MEDIUM",
+        "pattern": "^ADD\\s+http",
+        "message": "Использование 'ADD' с удаленным URL может быть небезопасным. Используйте 'COPY' для локальных файлов.",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "DJANGO_DEBUG_TRUE",
+        "severity": "HIGH",
+        "pattern": "DEBUG\\s*=\\s*True",
+        "message": "Включен режим отладки Django (DEBUG=True). В продакшене это раскрывает конфиденциальные данные и стек вызовов.",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "DJANGO_HARDCODED_SECRET",
+        "severity": "CRITICAL",
+        "pattern": "SECRET_KEY\\s*=\\s*['\"][^'\"]{20,}['\"]",
+        "message": "Захардкоженный SECRET_KEY в Django. Злоумышленник может подделать сессии и токены.",
+        "type": "regex"
+    },
+    {
+        "id": "SQLALCHEMY_RAW_FSTRING",
+        "severity": "CRITICAL",
+        "pattern": "\\.execute\\(\\s*f['\"].*?(SELECT|INSERT|UPDATE|DELETE)",
+        "message": "SQL-инъекция в SQLAlchemy через f-string. Используйте параметризованные запросы.",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "JWT_VERIFY_FALSE",
+        "severity": "CRITICAL",
+        "pattern": "verify\\s*[:=]\\s*False",
+        "message": "Отключена проверка подписи JWT (verify=False). Токен может быть подделан злоумышленником.",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "JWT_ALGO_NONE",
+        "severity": "CRITICAL",
+        "pattern": "algorithm(s)?\\s*=\\s*['\"]none['\"]",
+        "message": "Использование алгоритма JWT 'none'. Токен не имеет подписи и может быть изменен.",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "CRYPTO_WEAK_CIPHER",
+        "severity": "HIGH",
+        "pattern": "(DES|RC4|Blowfish)\\.new|MODE_ECB",
+        "message": "Использование устаревшего алгоритма шифрования (DES/RC4/Blowfish) или небезопасного режима ECB.",
+        "type": "regex",
+        "ignore_case": true
+    },
+    {
+        "id": "BANK_CARD_HARDCODED",
+        "severity": "CRITICAL",
+        "pattern": "[\"'](?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})[\"']",
+        "message": "Обнаружен номер банковской карты в коде. Это нарушение стандарта PCI DSS.",
+        "type": "regex"
+    },
+    {
+        "id": "IBAN_HARDCODED",
+        "severity": "HIGH",
+        "pattern": "\\b[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}\\b",
+        "message": "Обнаружен захардкоженный IBAN (банковский счет). Утечка финансовых данных.",
+        "type": "regex"
+    }
 ]
