@@ -1,108 +1,183 @@
-﻿[
+[
     {
         "id": "PY_EVAL",
         "severity": "HIGH",
         "pattern": "eval",
         "message": "Использование eval() опасно.",
-        "type": "function_call"
+        "type": "function_call",
+        "compliance": {
+            "cwe": "CWE-95",
+            "owasp": "A03:2021",
+            "pci": "6.5.1"
+        }
     },
     {
         "id": "PY_EXEC",
         "severity": "HIGH",
         "pattern": "exec",
         "message": "Использование exec() опасно.",
-        "type": "function_call"
+        "type": "function_call",
+        "compliance": {
+            "cwe": "CWE-95",
+            "owasp": "A03:2021",
+            "pci": "6.5.1"
+        }
     },
     {
         "id": "PY_OS_SYSTEM",
         "severity": "CRITICAL",
         "pattern": "os.system",
         "message": "Использование os.system() уязвимо к инъекции команд.",
-        "type": "function_call"
+        "type": "function_call",
+        "compliance": {
+            "cwe": "CWE-95",
+            "owasp": "A03:2021",
+            "pci": "6.5.1"
+        }
     },
     {
         "id": "SQL_RAW_FORMAT",
         "severity": "CRITICAL",
         "pattern": "execute",
         "message": "SQL-инъекция через f-string/.format.",
-        "type": "ast_call_check_sql"
+        "type": "ast_call_check_sql",
+        "compliance": {
+            "cwe": "CWE-89",
+            "owasp": "A03:2021",
+            "pci": "6.5.1"
+        }
     },
     {
         "id": "XSS_RENDER_TEMPLATE_STRING",
         "severity": "CRITICAL",
         "pattern": "render_template_string",
         "message": "XSS через render_template_string.",
-        "type": "function_call"
+        "type": "function_call",
+        "compliance": {
+            "cwe": "CWE-79",
+            "owasp": "A03:2021",
+            "pci": "6.5.7"
+        }
     },
     {
         "id": "PY_HASH_MD5",
         "severity": "MEDIUM",
         "pattern": "hashlib.md5",
         "message": "MD5 криптографически сломан.",
-        "type": "function_call"
+        "type": "function_call",
+        "compliance": {
+            "cwe": "CWE-327",
+            "owasp": "A02:2021",
+            "pci": "6.5.3"
+        }
     },
     {
         "id": "PY_YAML_LOAD",
         "severity": "HIGH",
         "pattern": "yaml.load",
         "message": "yaml.load() уязвим к RCE.",
-        "type": "function_call"
+        "type": "function_call",
+        "compliance": {
+            "cwe": "CWE-710",
+            "owasp": "A04:2021",
+            "pci": "6.5.5"
+        }
     },
     {
         "id": "JS_EVAL",
         "severity": "CRITICAL",
         "pattern": "eval\\s*\\(",
         "message": "JS eval() позволяет выполнить произвольный код.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-95",
+            "owasp": "A03:2021",
+            "pci": "6.5.1"
+        }
     },
     {
         "id": "JS_INNER_HTML",
         "severity": "HIGH",
         "pattern": "\\.innerHTML\\s*=",
         "message": "Запись в innerHTML может привести к XSS.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-710",
+            "owasp": "A04:2021",
+            "pci": "6.5.5"
+        }
     },
     {
         "id": "JS_DANGEROUSLY_SET_HTML",
         "severity": "HIGH",
         "pattern": "dangerouslySetInnerHTML",
         "message": "React dangerouslySetInnerHTML ведет к XSS.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-710",
+            "owasp": "A04:2021",
+            "pci": "6.5.5"
+        }
     },
     {
         "id": "PHP_EVAL",
         "severity": "CRITICAL",
         "pattern": "eval\\s*\\(",
         "message": "PHP eval() позволяет выполнить произвольный код.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-95",
+            "owasp": "A03:2021",
+            "pci": "6.5.1"
+        }
     },
     {
         "id": "SECRET_AWS_KEY",
         "severity": "CRITICAL",
         "pattern": "AKIA[0-9A-Z]{16}",
         "message": "Обнаружен ключ доступа AWS! Немедленно отзовите его.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-798",
+            "owasp": "A02:2021",
+            "pci": "6.5.3"
+        }
     },
     {
         "id": "SECRET_TELEGRAM_BOT",
         "severity": "HIGH",
         "pattern": "[0-9]{8,10}:[a-zA-Z0-9_-]{35}",
         "message": "Обнаружен токен Telegram-бота.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-798",
+            "owasp": "A02:2021",
+            "pci": "6.5.3"
+        }
     },
     {
         "id": "SECRET_STRIPE_KEY",
         "severity": "CRITICAL",
         "pattern": "sk_live_[0-9a-zA-Z]{24}",
         "message": "Обнаружен секретный ключ Stripe (Live).",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-798",
+            "owasp": "A02:2021",
+            "pci": "6.5.3"
+        }
     },
     {
         "id": "SECRET_PRIVATE_KEY",
         "severity": "CRITICAL",
         "pattern": "-----BEGIN (RSA|OPENSSH|DSA) PRIVATE KEY-----",
         "message": "Обнаружен приватный ключ SSH/RSA.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-798",
+            "owasp": "A02:2021",
+            "pci": "6.5.3"
+        }
     },
     {
         "id": "SECRET_GENERIC_PASSWORD",
@@ -110,7 +185,12 @@
         "pattern": "(password|passwd|pwd|secret|api_key|token|auth)\\s*[:=]\\s*['\"]?([^'\"\\s]+)['\"]?",
         "message": "Обнаружен захардкоженный пароль или секрет.",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-798",
+            "owasp": "A02:2021",
+            "pci": "6.5.3"
+        }
     },
     {
         "id": "DOCKER_ROOT_USER",
@@ -118,7 +198,12 @@
         "pattern": "^USER\\s+root",
         "message": "Dockerfile запускает контейнер от имени root. Создайте непривилегированного пользователя (USER appuser).",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-250",
+            "owasp": "A05:2021",
+            "pci": "2.2.4"
+        }
     },
     {
         "id": "DOCKER_LATEST_TAG",
@@ -126,7 +211,12 @@
         "pattern": "^FROM\\s+.*:latest",
         "message": "Использование тега 'latest' для базового образа небезопасно. Укажите конкретную версию (например, python:3.11-slim).",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-250",
+            "owasp": "A05:2021",
+            "pci": "2.2.4"
+        }
     },
     {
         "id": "DOCKER_EXPOSE_SSH",
@@ -134,7 +224,12 @@
         "pattern": "^EXPOSE\\s+22",
         "message": "В Dockerfile открыт SSH-порт (22). Это может привести к несанкционированному доступу.",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-250",
+            "owasp": "A05:2021",
+            "pci": "2.2.4"
+        }
     },
     {
         "id": "DOCKER_ADD_REMOTE",
@@ -142,7 +237,12 @@
         "pattern": "^ADD\\s+http",
         "message": "Использование 'ADD' с удаленным URL может быть небезопасным. Используйте 'COPY' для локальных файлов.",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-250",
+            "owasp": "A05:2021",
+            "pci": "2.2.4"
+        }
     },
     {
         "id": "DJANGO_DEBUG_TRUE",
@@ -150,14 +250,24 @@
         "pattern": "DEBUG\\s*=\\s*True",
         "message": "Включен режим отладки Django (DEBUG=True). В продакшене это раскрывает конфиденциальные данные и стек вызовов.",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-489",
+            "owasp": "A05:2021",
+            "pci": "6.5.5"
+        }
     },
     {
         "id": "DJANGO_HARDCODED_SECRET",
         "severity": "CRITICAL",
         "pattern": "SECRET_KEY\\s*=\\s*['\"][^'\"]{20,}['\"]",
         "message": "Захардкоженный SECRET_KEY в Django. Злоумышленник может подделать сессии и токены.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-798",
+            "owasp": "A02:2021",
+            "pci": "6.5.3"
+        }
     },
     {
         "id": "SQLALCHEMY_RAW_FSTRING",
@@ -165,7 +275,12 @@
         "pattern": "\\.execute\\(\\s*f['\"].*?(SELECT|INSERT|UPDATE|DELETE)",
         "message": "SQL-инъекция в SQLAlchemy через f-string. Используйте параметризованные запросы.",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-89",
+            "owasp": "A03:2021",
+            "pci": "6.5.1"
+        }
     },
     {
         "id": "JWT_VERIFY_FALSE",
@@ -173,7 +288,12 @@
         "pattern": "verify\\s*[:=]\\s*False",
         "message": "Отключена проверка подписи JWT (verify=False). Токен может быть подделан злоумышленником.",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-287",
+            "owasp": "A07:2021",
+            "pci": "6.5.10"
+        }
     },
     {
         "id": "JWT_ALGO_NONE",
@@ -181,7 +301,12 @@
         "pattern": "algorithm(s)?\\s*=\\s*['\"]none['\"]",
         "message": "Использование алгоритма JWT 'none'. Токен не имеет подписи и может быть изменен.",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-287",
+            "owasp": "A07:2021",
+            "pci": "6.5.10"
+        }
     },
     {
         "id": "CRYPTO_WEAK_CIPHER",
@@ -189,20 +314,35 @@
         "pattern": "(DES|RC4|Blowfish)\\.new|MODE_ECB",
         "message": "Использование устаревшего алгоритма шифрования (DES/RC4/Blowfish) или небезопасного режима ECB.",
         "type": "regex",
-        "ignore_case": true
+        "ignore_case": true,
+        "compliance": {
+            "cwe": "CWE-327",
+            "owasp": "A02:2021",
+            "pci": "6.5.3"
+        }
     },
     {
         "id": "BANK_CARD_HARDCODED",
         "severity": "CRITICAL",
         "pattern": "[\"'](?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})[\"']",
         "message": "Обнаружен номер банковской карты в коде. Это нарушение стандарта PCI DSS.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-710",
+            "owasp": "A04:2021",
+            "pci": "6.5.5"
+        }
     },
     {
         "id": "IBAN_HARDCODED",
         "severity": "HIGH",
         "pattern": "\\b[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}\\b",
         "message": "Обнаружен захардкоженный IBAN (банковский счет). Утечка финансовых данных.",
-        "type": "regex"
+        "type": "regex",
+        "compliance": {
+            "cwe": "CWE-710",
+            "owasp": "A04:2021",
+            "pci": "6.5.5"
+        }
     }
 ]

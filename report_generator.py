@@ -1,7 +1,17 @@
-﻿import json
+import json
 from fpdf import FPDF
 from datetime import datetime
 import os
+
+# Load rules for compliance mapping
+_rules_path = os.path.join(os.path.dirname(__file__), "scanner", "rules.json")
+try:
+    with open(_rules_path, encoding="utf-8-sig") as _f:
+        SCANNER_RULES = json.load(_f)
+except Exception as e:
+    print(f"[report] Failed to load rules.json: {e}", flush=True)
+    SCANNER_RULES = []
+
 
 class ReportGenerator:
     @staticmethod
@@ -15,7 +25,7 @@ class ReportGenerator:
                 "high": sum(1 for f in findings if f.get('severity') == 'HIGH'),
                 "medium": sum(1 for f in findings if f.get('severity') == 'MEDIUM')
             },
-            "findings": findings
+            "findings": [{**f, "compliance": next((r["compliance"] for r in SCANNER_RULES if r["id"] == f.get("rule_id")), {})} for f in findings]
         }
         return json.dumps(report, ensure_ascii=False, indent=4)
 
@@ -32,6 +42,7 @@ class ReportGenerator:
                 "ruleId": f.get('rule_id', 'UNKNOWN'),
                 "message": {"text": f.get('message', 'Уязвимость')},
                 "level": level,
+                "properties": {"compliance": next((r["compliance"] for r in SCANNER_RULES if r["id"] == f.get("rule_id")), {})},
                 "locations": [{
                     "physicalLocation": {
                         "artifactLocation": {"uri": f.get('file', filename)},
@@ -96,10 +107,11 @@ class ReportGenerator:
         # --- Таблица ---
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(230, 230, 230)
-        pdf.cell(25, 10, "Уровень", 1, 0, "C", True)
-        pdf.cell(45, 10, "Правило", 1, 0, "C", True)
-        pdf.cell(15, 10, "Стр.", 1, 0, "C", True)
-        pdf.cell(105, 10, "Код / Файл", 1, 1, "C", True)
+        pdf.cell(20, 10, "Уровень", 1, 0, "C", True)
+        pdf.cell(35, 10, "Правило", 1, 0, "C", True)
+        pdf.cell(10, 10, "Стр.", 1, 0, "C", True)
+        pdf.cell(45, 10, "Compliance", 1, 0, "C", True)
+        pdf.cell(80, 10, "Код / Файл", 1, 1, "C", True)
         
         pdf.set_font("Arial", "", 9)
         for f in findings:
@@ -120,10 +132,14 @@ class ReportGenerator:
             # Цвет для AI
             if f.get('rule_id') == 'AI_LOGIC_FLAW': pdf.set_text_color(150, 0, 200)
             
-            pdf.cell(25, 10, str(f.get('severity', 'N/A')), 1, 0, "C")
+            comp = next((r["compliance"] for r in SCANNER_RULES if r["id"] == f.get("rule_id")), {})
+            comp_str = f"{comp.get('cwe','')} / {comp.get('owasp','')}" if comp else ""
+
+            pdf.cell(20, 10, str(f.get('severity', 'N/A'))[:8], 1, 0, "C")
             pdf.set_text_color(0, 0, 0)
-            pdf.cell(45, 10, str(f.get('rule_id', 'N/A')), 1, 0, "C")
-            pdf.cell(15, 10, str(f.get('line', '')), 1, 0, "C")
-            pdf.cell(105, 10, display_text, 1, 1, "L")
+            pdf.cell(35, 10, str(f.get('rule_id', 'N/A'))[:14], 1, 0, "C")
+            pdf.cell(10, 10, str(f.get('line', '')), 1, 0, "C")
+            pdf.cell(45, 10, comp_str[:18], 1, 0, "C")
+            pdf.cell(80, 10, display_text[:40], 1, 1, "L")
             
         return bytes(pdf.output())
