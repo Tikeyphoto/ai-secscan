@@ -181,7 +181,19 @@
                     </div>
                 </div>
 
-                <div id="loader" class="spinner"></div>
+                
+                <!-- Прогресс-бар -->
+                <div id="progressContainer" style="display: none; margin: 20px 0; background: var(--bg-surface); padding: 15px; border-radius: 10px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span id="progressText" style="font-size: 14px; color: var(--text-main);">Анализ кода...</span>
+                        <span id="progressPercent" style="font-size: 14px; color: var(--primary); font-weight: bold;">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 10px; background: #11111b; border-radius: 5px; overflow: hidden;">
+                        <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #89b4fa, #cba6f7); transition: width 0.4s ease;"></div>
+                    </div>
+                </div>
+                
+<div id="loader" class="spinner"></div>
                 <div id="results" style="margin-top: 20px;"></div>
             </div>
 
@@ -214,24 +226,19 @@
                     {% endif %}
                 </div>
 
-                <h3><i class="fa-solid fa-clock-rotate-left"></i> {{ t('profile.last_scans') }}</h3>
-                {% if history %}
-                    <table class="history-table">
-                        <thead><tr><th>{{ t('profile.table_file') }}</th><th>{{ t('profile.table_date') }}</th><th>{{ t('profile.table_issues') }}</th></tr></thead>
-                        <tbody>
-                            {% for scan in history %}
-                            <tr>
-                                <td style="font-weight: 500;"><i class="fa-solid fa-file-code" style="color: var(--primary);"></i> {{ scan['filename'] }}</td>
-                                <td style="color: var(--text-muted);">{{ scan['timestamp'] }}</td>
-                                <td><span class="badge {{ 'CRITICAL' if scan['findings_count'] > 0 else 'SUCCESS' }}" style="background: transparent;">{{ scan['findings_count'] }}</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <p style="color: var(--text-muted);">{{ t('profile.no_issues') }}</p>
-                {% endif %}
-            </div>
+                
+                    <div class="card" style="margin-top: 20px; background: rgba(16, 185, 129, 0.05); border: 1px solid #10b981; border-radius: 12px; text-align: center; padding: 30px;">
+                        <div style="font-size: 40px; margin-bottom: 15px;">🛡️</div>
+                        <h3 style="color: #10b981; margin-top: 0;">Конфиденциальность превыше всего</h3>
+                        <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto; line-height: 1.6;">
+                            Мы не сохраняем ваш исходный код, названия файлов и результаты сканирований на наших серверах. 
+                            Все проверки выполняются в оперативной памяти и мгновенно удаляются после генерации отчёта.
+                        </p>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-top: 15px;">
+                            В статистике отображаются только общие (анонимные) счётчики активности.
+                        </p>
+                    </div>
+                </div>
 
             <!-- 3. API КЛЮЧИ -->
             <div id="tab-api" class="tab-content">
@@ -547,8 +554,59 @@
             }
         }
 
-        function showLoading() { document.getElementById('loader').style.display = 'block'; document.getElementById('results').innerHTML = ''; }
-        function hideLoading() { document.getElementById('loader').style.display = 'none'; }
+        let progressInterval = null;
+
+        function showLoading() { 
+            document.getElementById('results').innerHTML = ''; 
+            const container = document.getElementById('progressContainer');
+            const bar = document.getElementById('progressBar');
+            const text = document.getElementById('progressText');
+            const percent = document.getElementById('progressPercent');
+            
+            if (!container) return; // На случай, если HTML не загрузился
+            
+            container.style.display = 'block';
+            bar.style.width = '0%';
+            percent.innerText = '0%';
+            text.innerText = 'Инициализация анализа...';
+            
+            let progress = 0;
+            if (progressInterval) clearInterval(progressInterval);
+            
+            progressInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 4; // Плавное заполнение
+                    if (progress > 90) progress = 90;
+                    bar.style.width = progress + '%';
+                    percent.innerText = Math.round(progress) + '%';
+                    
+                    // Смена текста в зависимости от прогресса
+                    if (progress > 20 && progress < 50) {
+                        text.innerText = 'Применение правил безопасности...';
+                    } else if (progress >= 50) {
+                        text.innerText = 'ИИ анализирует логические уязвимости...';
+                    }
+                }
+            }, 400);
+        }
+
+        function hideLoading() { 
+            if (progressInterval) clearInterval(progressInterval);
+            const container = document.getElementById('progressContainer');
+            const bar = document.getElementById('progressBar');
+            const percent = document.getElementById('progressPercent');
+            const text = document.getElementById('progressText');
+            
+            if (!container) return;
+            
+            bar.style.width = '100%';
+            percent.innerText = '100%';
+            text.innerText = 'Готово! Отрисовка результатов...';
+            
+            setTimeout(() => {
+                container.style.display = 'none';
+            }, 600);
+        }
 
         function handleError(status, data) {
             hideLoading();

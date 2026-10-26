@@ -1,11 +1,12 @@
-﻿<!DOCTYPE html>
-<html lang="{{ current_lang }}">
+<!DOCTYPE html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Админ-панель - AI-SecScan</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <!-- Локальный Chart.js -->
+    <script src="/static/js/chart.min.js"></script>
 </head>
 <body style="overflow: auto;">
     <nav class="navbar">
@@ -16,7 +17,7 @@
     </nav>
 
     <div class="container" style="margin-top: 40px; padding: 20px; max-width: 1200px;">
-
+        
         <!-- Аналитика -->
         <div class="card" style="margin-bottom: 20px;">
             <h2><i class="fa-solid fa-chart-line"></i> Статистика посещаемости</h2>
@@ -116,134 +117,149 @@
         let timelineChart, browsersChart;
 
         async function loadAnalytics() {
-            const res = await fetch('/api/admin/analytics');
-            const d = await res.json();
-            if (d.error) {
-                document.getElementById('statTotal').textContent = 'Ошибка';
-                document.getElementById('statTotal').style.fontSize = '14px';
-                document.getElementById('statTotal').textContent = d.error;
-                return;
+            try {
+                const res = await fetch('/api/admin/analytics');
+                const d = await res.json();
+                
+                if (d.error) {
+                    document.getElementById('statTotal').textContent = 'Ошибка';
+                    document.getElementById('statTotal').style.fontSize = '14px';
+                    return;
+                }
+
+                document.getElementById('statTotal').textContent = d.total_requests.toLocaleString('ru-RU');
+                document.getElementById('statUnique').textContent = d.unique_visitors.toLocaleString('ru-RU');
+                const sum14 = d.timeline.reduce((a, b) => a + b.count, 0);
+                document.getElementById('stat14d').textContent = sum14.toLocaleString('ru-RU');
+
+                const tlLabels = d.timeline.map(x => x.date.slice(5));
+                const tlData = d.timeline.map(x => x.count);
+                if (timelineChart) timelineChart.destroy();
+                timelineChart = new Chart(document.getElementById('chartTimeline'), {
+                    type: 'line',
+                    data: { labels: tlLabels, datasets: [{ label: 'Запросов', data: tlData, borderColor: '#89b4fa', backgroundColor: 'rgba(137,180,250,0.15)', fill: true, tension: 0.3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+
+                const bLabels = Object.keys(d.browsers);
+                const bData = Object.values(d.browsers);
+                const bColors = ['#89b4fa', '#a6e3a1', '#f9e2af', '#f38ba8', '#cba6f7'];
+                if (browsersChart) browsersChart.destroy();
+                browsersChart = new Chart(document.getElementById('chartBrowsers'), {
+                    type: 'doughnut',
+                    data: { labels: bLabels, datasets: [{ data: bData, backgroundColor: bColors, borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#cdd6f4', font: { size: 11 } } } } }
+                });
+
+                let tp = '';
+                d.top_paths.forEach(([p, c]) => { tp += `<tr><td><code style="font-size:12px;">${p}</code></td><td>${c}</td></tr>`; });
+                document.getElementById('tablePaths').innerHTML = tp || '<tr><td colspan="2">Нет данных</td></tr>';
+
+                let ti = '';
+                d.top_ips.forEach(([ip, c]) => { ti += `<tr><td><code style="font-size:12px;">${ip}</code></td><td>${c}</td></tr>`; });
+                document.getElementById('tableIPs').innerHTML = ti || '<tr><td colspan="2">Нет данных</td></tr>';
+            } catch (e) {
+                console.error('Analytics error:', e);
             }
-
-            document.getElementById('statTotal').textContent = d.total_requests.toLocaleString('ru-RU');
-            document.getElementById('statUnique').textContent = d.unique_visitors.toLocaleString('ru-RU');
-            const sum14 = d.timeline.reduce((a, b) => a + b.count, 0);
-            document.getElementById('stat14d').textContent = sum14.toLocaleString('ru-RU');
-
-            // Timeline chart
-            const tlLabels = d.timeline.map(x => x.date.slice(5));
-            const tlData = d.timeline.map(x => x.count);
-            if (timelineChart) timelineChart.destroy();
-            timelineChart = new Chart(document.getElementById('chartTimeline'), {
-                type: 'line',
-                data: {
-                    labels: tlLabels,
-                    datasets: [{
-                        label: 'Запросов',
-                        data: tlData,
-                        borderColor: '#89b4fa',
-                        backgroundColor: 'rgba(137,180,250,0.15)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-
-            // Browsers pie
-            const bLabels = Object.keys(d.browsers);
-            const bData = Object.values(d.browsers);
-            const bColors = ['#89b4fa', '#a6e3a1', '#f9e2af', '#f38ba8', '#cba6f7'];
-            if (browsersChart) browsersChart.destroy();
-            browsersChart = new Chart(document.getElementById('chartBrowsers'), {
-                type: 'doughnut',
-                data: { labels: bLabels, datasets: [{ data: bData, backgroundColor: bColors, borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#cdd6f4', font: { size: 11 } } } } }
-            });
-
-            // Top paths
-            let tp = '';
-            d.top_paths.forEach(([p, c]) => { tp += `<tr><td><code style="font-size:12px;">${p}</code></td><td>${c}</td></tr>`; });
-            document.getElementById('tablePaths').innerHTML = tp || '<tr><td colspan="2">Нет данных</td></tr>';
-
-            // Top IPs
-            let ti = '';
-            d.top_ips.forEach(([ip, c]) => { ti += `<tr><td><code style="font-size:12px;">${ip}</code></td><td>${c}</td></tr>`; });
-            document.getElementById('tableIPs').innerHTML = ti || '<tr><td colspan="2">Нет данных</td></tr>';
         }
 
         async function loadUsers() {
-            const res = await fetch('/api/admin/users');
-            if (!res.ok) return;
-            const users = await res.json();
-            document.getElementById('userCount').textContent = users.length;
-            let html = '';
-            users.forEach(u => {
-                html += `<tr>
-                    <td>${u.id}</td>
-                    <td><b>${u.username}</b></td>
-                    <td style="font-size: 13px; color: var(--text-muted);">${u.email || '-'}</td>
-                    <td><select onchange="updateUser('${u.username}', 'plan', this.value)" style="padding: 4px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 4px;">
-                        <option value="free" ${u.plan==='free'?'selected':''}>Free</option>
-                        <option value="pro" ${u.plan==='pro'?'selected':''}>Pro</option>
-                        <option value="startup" ${u.plan==='startup'?'selected':''}>Startup</option>
-                        <option value="team" ${u.plan==='team'?'selected':''}>Team</option>
-                        <option value="enterprise" ${u.plan==='enterprise'?'selected':''}>Enterprise</option>
-                    </select></td>
-                    <td>${u.is_verified ? '✅' : '<button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="updateUser(\'' + u.username + '\', \'is_verified\', 1)">Подтв.</button>'}</td>
-                    <td>${u.is_admin ? '👑' : '-'}</td>
-                    <td style="white-space: nowrap;">
-                        <button class="btn" style="padding: 4px 8px; font-size: 11px; background: #f59e0b;" onclick="resetPassword('${u.username}')">🔑</button>
-                        <button class="btn" style="padding: 4px 8px; font-size: 11px; background: #ef4444;" onclick="deleteUser('${u.username}')">🗑</button>
-                    </td>
-                </tr>`;
-            });
-            document.getElementById('usersTable').innerHTML = html;
+            try {
+                const res = await fetch('/api/admin/users');
+                if (!res.ok) return;
+                const users = await res.json();
+                document.getElementById('userCount').textContent = users.length;
+                
+                let html = '';
+                users.forEach(u => {
+                    let verifyBtn = '';
+                    if (!u.is_verified) {
+                        verifyBtn = `<button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="updateUser('${u.username}', 'is_verified', 1)">Подтв.</button>`;
+                    } else {
+                        verifyBtn = '✅';
+                    }
+                    
+                    html += '<tr>' +
+                        '<td>' + u.id + '</td>' +
+                        '<td><b>' + u.username + '</b></td>' +
+                        '<td style="font-size: 13px; color: var(--text-muted);">' + (u.email || '-') + '</td>' +
+                        '<td><select onchange="updateUser(\'' + u.username + '\', \'plan\', this.value)" style="padding: 4px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 4px;">' +
+                        '<option value="free" ' + (u.plan==='free'?'selected':'') + '>Free</option>' +
+                        '<option value="pro" ' + (u.plan==='pro'?'selected':'') + '>Pro</option>' +
+                        '<option value="startup" ' + (u.plan==='startup'?'selected':'') + '>Startup</option>' +
+                        '<option value="team" ' + (u.plan==='team'?'selected':'') + '>Team</option>' +
+                        '<option value="enterprise" ' + (u.plan==='enterprise'?'selected':'') + '>Enterprise</option>' +
+                        '</select></td>' +
+                        '<td>' + verifyBtn + '</td>' +
+                        '<td>' + (u.is_admin ? '👑' : '-') + '</td>' +
+                        '<td style="white-space: nowrap;">' +
+                        '<button class="btn" style="padding: 4px 8px; font-size: 11px; background: #f59e0b;" onclick="resetPassword(\'' + u.username + '\')">🔑</button> ' +
+                        '<button class="btn" style="padding: 4px 8px; font-size: 11px; background: #ef4444;" onclick="deleteUser(\'' + u.username + '\')">🗑</button>' +
+                        '</td></tr>';
+                });
+                document.getElementById('usersTable').innerHTML = html;
+            } catch (e) {
+                console.error('Users error:', e);
+            }
         }
 
         async function updateUser(username, field, value) {
-            await fetch(`/api/admin/user/${username}/update`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({field,value})});
+            await fetch('/api/admin/user/' + username + '/update', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({field:field, value:value})});
             loadUsers();
         }
+        
         async function deleteUser(username) {
-            if (!confirm(`Удалить ${username}?`)) return;
-            await fetch(`/api/admin/user/${username}/delete`, {method:'POST'});
+            if (!confirm('Удалить ' + username + '?')) return;
+            await fetch('/api/admin/user/' + username + '/delete', {method:'POST'});
             loadUsers();
         }
+        
         async function resetPassword(username) {
-            const pwd = prompt(`Новый пароль для ${username} (мин. 6):`);
+            const pwd = prompt('Новый пароль для ' + username + ' (мин. 6):');
             if (!pwd || pwd.length < 6) return;
-            const res = await fetch(`/api/admin/user/${username}/reset_password`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_password:pwd})});
+            const res = await fetch('/api/admin/user/' + username + '/reset_password', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_password:pwd})});
             const d = await res.json();
             alert(d.error || 'Пароль изменён!');
         }
 
         async function loadInvites() {
-            const res = await fetch('/api/admin/invites');
-            if (!res.ok) return;
-            const invites = await res.json();
-            let html = '';
-            invites.forEach(i => {
-                const left = i.max_uses - i.current_uses;
-                const expired = i.expires_at && new Date(i.expires_at) < new Date();
-                const status = expired ? '❌ истёк' : (left <= 0 ? '❌ использован' : `✅ ${left} осталось`);
-                const exp = i.expires_at ? new Date(i.expires_at).toLocaleDateString('ru-RU') : '-';
-                html += `<tr><td><code style="background:#111;padding:4px 8px;border-radius:4px;font-size:13px;">${i.code}</code></td><td>${i.plan}</td><td>${status}</td><td>${exp}</td><td><button class="btn" style="padding:4px 8px;font-size:11px;background:#ef4444;" onclick="deleteInvite(${i.id})">🗑</button></td></tr>`;
-            });
-            document.getElementById('invitesTable').innerHTML = html || '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Нет активных кодов</td></tr>';
+            try {
+                const res = await fetch('/api/admin/invites');
+                if (!res.ok) return;
+                const invites = await res.json();
+                let html = '';
+                invites.forEach(i => {
+                    const left = i.max_uses - i.current_uses;
+                    const expired = i.expires_at && new Date(i.expires_at) < new Date();
+                    const status = expired ? '❌ истёк' : (left <= 0 ? '❌ использован' : '✅ ' + left + ' осталось');
+                    const exp = i.expires_at ? new Date(i.expires_at).toLocaleDateString('ru-RU') : '-';
+                    html += '<tr>' +
+                        '<td><code style="background:#111;padding:4px 8px;border-radius:4px;font-size:13px;">' + i.code + '</code></td>' +
+                        '<td>' + i.plan + '</td>' +
+                        '<td>' + status + '</td>' +
+                        '<td>' + exp + '</td>' +
+                        '<td><button class="btn" style="padding:4px 8px;font-size:11px;background:#ef4444;" onclick="deleteInvite(' + i.id + ')">🗑</button></td>' +
+                        '</tr>';
+                });
+                document.getElementById('invitesTable').innerHTML = html || '<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Нет активных кодов</td></tr>';
+            } catch (e) {
+                console.error('Invites error:', e);
+            }
         }
+        
         async function createInvite() {
             const plan = document.getElementById('invitePlan').value;
             const max_uses = parseInt(document.getElementById('inviteUses').value);
             const days = parseInt(document.getElementById('inviteDays').value);
-            const res = await fetch('/api/admin/invite/create', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,max_uses,days})});
+            const res = await fetch('/api/admin/invite/create', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:plan,max_uses:max_uses,days:days})});
             const d = await res.json();
             if (d.error) alert(d.error);
             else { prompt("Код создан!", d.code); loadInvites(); }
         }
+        
         async function deleteInvite(id) {
             if (!confirm("Удалить?")) return;
-            await fetch(`/api/admin/invite/${id}/delete`, {method:'POST'});
+            await fetch('/api/admin/invite/' + id + '/delete', {method:'POST'});
             loadInvites();
         }
 

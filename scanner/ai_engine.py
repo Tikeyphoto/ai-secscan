@@ -50,13 +50,17 @@ class AIEngine:
                 if match:
                     findings = json.loads(match.group(0))
                     for f in findings:
+                        line_num = f.get("line", 1)
+                        chunk_lines = chunk.split('\n')
+                        real_code = chunk_lines[line_num - 1].strip() if line_num <= len(chunk_lines) else "N/A"
+                        
                         all_findings.append({
                             "id": f"AI_{hash(f.get('message'))}",
                             "rule_id": "AI_LOGIC_FLAW",
                             "severity": f.get("severity", "HIGH").upper(),
                             "message": "[AI] " + f.get("message", "Логическая уязвимость"),
-                            "line": f.get("line", 1),
-                            "code": "Анализ LLM (чанк)",
+                            "line": line_num,
+                            "code": real_code if real_code else "Анализ LLM (чанк)",
                             "weight": 1.0
                         })
             except Exception as e:
@@ -72,7 +76,15 @@ class AIEngine:
 Верни ТОЛЬКО безопасный код, без markdown-разметки (никаких ```), без объяснений и комментариев.
 Код:
 {code}"""
-        payload = {"model": self.model_name, "prompt": prompt, "stream": True}
+        payload = {
+            "model": self.model_name, 
+            "prompt": prompt, 
+            "stream": True,
+            "options": {
+                "num_predict": 120,  # Ограничиваем ответ, чтобы быстрее получить результат
+                "temperature": 0.1
+            }
+        }
         
         try:
             response = requests.post(self.api_url, json=payload, stream=True, timeout=100)

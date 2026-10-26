@@ -199,8 +199,8 @@ def save_scan_report(username, filename, findings):
     conn = get_db()
     try:
         findings_json = json.dumps(findings, ensure_ascii=False)
-        conn.execute('''INSERT INTO scan_reports (username, filename, findings_json) VALUES (?, ?, ?) ON CONFLICT(username) DO UPDATE SET filename=excluded.filename, findings_json=excluded.findings_json, timestamp=CURRENT_TIMESTAMP''', (username, filename, findings_json))
-        conn.execute("INSERT INTO scans (username, filename, findings_count) VALUES (?, ?, ?)", (username, filename, len(findings)))
+        conn.execute('''INSERT INTO scan_reports (username, filename, findings_json) VALUES (?, 'Anonymous Project', ?) ON CONFLICT(username) DO UPDATE SET filename=excluded.filename, findings_json=excluded.findings_json, timestamp=CURRENT_TIMESTAMP''', (username, findings_json))
+        conn.execute("INSERT INTO scans (username, filename, findings_count) VALUES (?, ?, ?)", (username, 'Anonymous Project', len(findings)))
         conn.commit()
     finally: conn.close()
 

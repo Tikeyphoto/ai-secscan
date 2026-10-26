@@ -26,6 +26,8 @@ import db_manager
 from translations import TRANSLATIONS
 
 app = Flask(__name__)
+
+
 app.secret_key = 'super_secret_key_for_dev' 
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 swagger = Swagger(app, template={'info': {'title': 'AI-SecScan API', 'description': 'API для сканирования кода', 'version': '1.0.0'}})
@@ -784,6 +786,7 @@ def yandex_verify():
     from flask import Response
     html = """<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body>Verification: 47481968951e9b26</body></html>"""
     return Response(html, mimetype='text/html')
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)
