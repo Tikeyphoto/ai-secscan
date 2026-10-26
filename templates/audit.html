@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Audit Log - AI-SecScan</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body style="overflow: auto;">
+    <nav class="navbar">
+        <div class="logo"><i class="fa-solid fa-shield-halved" style="color: #f9e2af;"></i> Audit Log</div>
+        <div class="user-nav">
+            <a href="/admin" class="btn" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);"><i class="fa-solid fa-arrow-left"></i> В админку</a>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 40px; padding: 20px; max-width: 1300px;">
+
+        <div class="card">
+            <h2><i class="fa-solid fa-list-check"></i> Журнал действий</h2>
+            <p style="color: var(--text-muted); font-size: 14px;">Всего записей: <span id="totalCount">-</span></p>
+
+            <div style="display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; align-items: end;">
+                <div>
+                    <label style="font-size: 12px; color: var(--text-muted);">Пользователь</label>
+                    <input type="text" id="filterUser" placeholder="username" style="display: block; padding: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px; width: 180px;">
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: var(--text-muted);">Действие</label>
+                    <select id="filterAction" style="display: block; padding: 10px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px; min-width: 200px;">
+                        <option value="">— все —</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="applyFilters()" style="background: var(--primary);"><i class="fa-solid fa-filter"></i> Применить</button>
+                <button class="btn" onclick="resetFilters()" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted);"><i class="fa-solid fa-xmark"></i> Сброс</button>
+                <button class="btn" onclick="loadAudit()" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);"><i class="fa-solid fa-rotate"></i> Обновить</button>
+            </div>
+
+            <table class="history-table" style="margin-top: 15px; font-size: 13px;">
+                <thead>
+                    <tr>
+                        <th style="width: 160px;">Время</th>
+                        <th style="width: 130px;">Пользователь</th>
+                        <th style="width: 200px;">Действие</th>
+                        <th style="width: 160px;">Объект</th>
+                        <th style="width: 130px;">IP</th>
+                        <th>Детали</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTable">
+                    <tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Загрузка...</td></tr>
+                </tbody>
+            </table>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                <span id="pageInfo" style="color: var(--text-muted); font-size: 13px;">-</span>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn" id="btnPrev" onclick="prevPage()" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted);"><i class="fa-solid fa-chevron-left"></i> Назад</button>
+                    <button class="btn" id="btnNext" onclick="nextPage()" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted);">Вперёд <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOffset = 0;
+        let currentLimit = 100;
+        let totalRows = 0;
+
+        async function loadActions() {
+            try {
+                const res = await fetch('/api/admin/audit/actions');
+                const actions = await res.json();
+                const sel = document.getElementById('filterAction');
+                actions.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a;
+                    opt.textContent = a;
+                    sel.appendChild(opt);
+                });
+            } catch (e) { console.error('loadActions:', e); }
+        }
+
+        async function loadAudit() {
+            const user = document.getElementById('filterUser').value.trim();
+            const action = document.getElementById('filterAction').value;
+
+            const params = new URLSearchParams();
+            if (user) params.set('user', user);
+            if (action) params.set('action', action);
+            params.set('limit', currentLimit);
+            params.set('offset', currentOffset);
+
+            try {
+                const res = await fetch('/api/admin/audit?' + params.toString());
+                const d = await res.json();
+                if (d.error) {
+                    document.getElementById('auditTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#f38ba8;">${d.error}</td></tr>`;
+                    return;
+                }
+                totalRows = d.total;
+                renderAudit(d.rows);
+                updatePager();
+            } catch (e) {
+                console.error('loadAudit:', e);
+                document.getElementById('auditTable').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#f38ba8;">Ошибка загрузки</td></tr>`;
+            }
+        }
+
+        function renderAudit(rows) {
+            const tbody = document.getElementById('auditTable');
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Нет записей</td></tr>';
+                return;
+            }
+            let html = '';
+            rows.forEach(r => {
+                const ts = (r.timestamp || '').replace('T', ' ').slice(0, 19);
+                let details = r.details || '';
+                if (details.length > 80) details = details.slice(0, 80) + '…';
+                const badge = actionBadge(r.action);
+                html += `<tr>
+                    <td style="font-family: monospace; font-size: 12px;">${ts}</td>
+                    <td><strong>${esc(r.username || '—')}</strong></td>
+                    <td>${badge}</td>
+                    <td><code style="font-size:12px;">${esc(r.target || '—')}</code></td>
+                    <td style="font-family: monospace; font-size: 12px;">${esc(r.ip_address || '—')}</td>
+                    <td style="font-size:12px; color: var(--text-muted);">${esc(details)}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function actionBadge(action) {
+            const colors = {
+                'login_success': '#a6e3a1',
+                'login_failed': '#f38ba8',
+                'login_unverified': '#f9e2af',
+                'login_2fa_pending': '#89b4fa',
+                'login_2fa_success': '#a6e3a1',
+                'register': '#89b4fa',
+                'admin_delete_user': '#f38ba8',
+                'admin_reset_password': '#f9e2af',
+                'admin_update_user': '#cba6f7',
+                'password_changed': '#f9e2af',
+                'email_changed': '#f9e2af',
+                '2fa_enabled': '#a6e3a1',
+                '2fa_disabled': '#f38ba8'
+            };
+            const c = colors[action] || 'var(--text-muted)';
+            return `<span style="display:inline-block; padding:2px 8px; border-radius:4px; background: rgba(255,255,255,0.06); color: ${c}; font-size: 12px; font-family: monospace;">${esc(action)}</span>`;
+        }
+
+        function esc(s) {
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function updatePager() {
+            const from = totalRows === 0 ? 0 : currentOffset + 1;
+            const to = Math.min(currentOffset + currentLimit, totalRows);
+            document.getElementById('pageInfo').textContent = `${from}–${to} из ${totalRows}`;
+            document.getElementById('totalCount').textContent = totalRows;
+            document.getElementById('btnPrev').disabled = currentOffset <= 0;
+            document.getElementById('btnNext').disabled = currentOffset + currentLimit >= totalRows;
+        }
+
+        function prevPage() {
+            if (currentOffset > 0) {
+                currentOffset = Math.max(0, currentOffset - currentLimit);
+                loadAudit();
+            }
+        }
+        function nextPage() {
+            if (currentOffset + currentLimit < totalRows) {
+                currentOffset += currentLimit;
+                loadAudit();
+            }
+        }
+        function applyFilters() {
+            currentOffset = 0;
+            loadAudit();
+        }
+        function resetFilters() {
+            document.getElementById('filterUser').value = '';
+            document.getElementById('filterAction').value = '';
+            currentOffset = 0;
+            loadAudit();
+        }
+
+        loadActions();
+        loadAudit();
+        setInterval(loadAudit, 30000);
+    </script>
+</body>
+</html>

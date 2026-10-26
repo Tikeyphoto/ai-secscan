@@ -109,6 +109,10 @@ def _init_db_postgres():
         cur.execute("CREATE TABLE IF NOT EXISTS custom_rules (id BIGSERIAL PRIMARY KEY, username TEXT, rule_id TEXT, severity TEXT, pattern TEXT, message TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS invite_codes (id BIGSERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL, plan TEXT DEFAULT 'pro', created_by TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, used_by TEXT, used_at TIMESTAMP, expires_at TIMESTAMP, max_uses INTEGER DEFAULT 1, current_uses INTEGER DEFAULT 0)")
         cur.execute("CREATE TABLE IF NOT EXISTS sboms (username TEXT PRIMARY KEY, filename TEXT, sbom_json TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        cur.execute("CREATE TABLE IF NOT EXISTS audit_log (id BIGSERIAL PRIMARY KEY, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, username TEXT, action TEXT NOT NULL, target TEXT, details TEXT, ip_address TEXT, user_agent TEXT)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_username ON audit_log(username)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)")
         conn.commit()
         cur.close()
         print("[db] Postgres schema initialized", flush=True)
@@ -478,5 +482,69 @@ def delete_invite(invite_id):
     try:
         conn.execute("DELETE FROM invite_codes WHERE id = ?", (invite_id,))
         conn.commit()
+    finally:
+        conn.close()
+
+
+# ============ AUDIT LOG ============
+def log_action(username, action, target=None, details=None, ip=None, ua=None):
+    """Записать действие в audit_log. Никогда не бросает исключение (логирование не должно ломать запрос)."""
+    try:
+        conn = get_db()
+        try:
+            details_str = json.dumps(details, ensure_ascii=False) if details is not None else None
+            ua_trunc = (ua[:500] if ua else None)
+            conn.execute(
+                "INSERT INTO audit_log (username, action, target, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
+                (username or "anonymous", action, target, details_str, ip, ua_trunc),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"[audit] log_action failed: {e}", flush=True)
+
+
+def get_audit_log(username=None, action=None, limit=100, offset=0):
+    """Вернуть записи audit_log с фильтрами."""
+    conn = get_db()
+    try:
+        q = "SELECT id, timestamp, username, action, target, details, ip_address, user_agent FROM audit_log WHERE 1=1"
+        params = []
+        if username:
+            q += " AND username = ?"
+            params.append(username)
+        if action:
+            q += " AND action LIKE ?"
+            params.append(f"{action}%")
+        q += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+        params.extend([int(limit), int(offset)])
+        return conn.execute(q, params).fetchall()
+    finally:
+        conn.close()
+
+
+def get_audit_actions():
+    """Уникальные actions для dropdown-фильтра."""
+    conn = get_db()
+    try:
+        rows = conn.execute("SELECT DISTINCT action FROM audit_log ORDER BY action").fetchall()
+        return [r["action"] for r in rows]
+    finally:
+        conn.close()
+
+
+def get_audit_count(username=None, action=None):
+    conn = get_db()
+    try:
+        q = "SELECT COUNT(*) FROM audit_log WHERE 1=1"
+        params = []
+        if username:
+            q += " AND username = ?"
+            params.append(username)
+        if action:
+            q += " AND action LIKE ?"
+            params.append(f"{action}%")
+        return conn.execute(q, params).fetchone()[0]
     finally:
         conn.close()

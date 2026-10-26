@@ -136,6 +136,24 @@ SENDPULSE_CLIENT_ID = os.environ.get("SENDPULSE_CLIENT_ID", "")
 SENDPULSE_CLIENT_SECRET = os.environ.get("SENDPULSE_CLIENT_SECRET", "")
 DOMAIN_URL = "https://aisecscan.by"
 
+
+def audit(action, target=None, details=None, username_override=None):
+    """Удобная обёртка: берёт username из session, IP и UA из request."""
+    try:
+        u = username_override or session.get('username') or 'anonymous'
+        ip = None
+        ua = None
+        try:
+            ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            if ip and ',' in ip:
+                ip = ip.split(',')[0].strip()
+            ua = request.headers.get('User-Agent', '')[:500]
+        except Exception:
+            pass
+        db_manager.log_action(u, action, target=target, details=details, ip=ip, ua=ua)
+    except Exception as e:
+        print(f"[audit] wrapper failed: {e}", flush=True)
+
 def _get_redis_for_email():
     """Возвращает Redis-клиент или None, если недоступен."""
     try:
@@ -250,7 +268,20 @@ def register():
             if invite_code:
                 db_manager.use_invite(invite_code, username)
             verify_link = f"{DOMAIN_URL}/verify/{username}"
-            flash("Аккаунт успешно создан! Теперь вы можете войти.")
+            audit('register', target=username, username_override=username, details={'email': email, 'plan': plan})
+            email_body = (
+                f"Здравствуйте, {username}!\n\n"
+                f"Спасибо за регистрацию в AI-SecScan.\n\n"
+                f"Для подтверждения аккаунта перейдите по ссылке:\n"
+                f"{verify_link}\n\n"
+                f"Если вы не регистрировались — просто проигнорируйте это письмо.\n\n"
+                f"--\nКоманда AI-SecScan\nhttps://aisecscan.by"
+            )
+            try:
+                send_email_async(email, "AI-SecScan: Подтвердите ваш email", email_body)
+            except Exception as e:
+                print(f"[REGISTER] send_email failed: {e}", flush=True)
+            flash("Аккаунт успешно создан! Мы отправили ссылку для подтверждения на email. Проверьте почту (и папку Спам).")
             return redirect(url_for('login'))
         return render_template('register.html', error="Пользователь уже существует")
     return render_template('register.html')
@@ -295,18 +326,22 @@ def login():
         if user and check_password_hash(user['password_hash'], password):
 
             if not user['is_verified']:
+                audit('login_unverified', username_override=username)
                 return render_template(
                     'login.html',
                     error=f"Email не подтверждён. Проверьте почту или <a href='/resend_verification?username={username}'>отправьте письмо повторно</a>."
                 )
 
             if user['totp_secret']:
+                audit('login_2fa_pending', username_override=username)
                 session['pending_2fa_user'] = username
                 return redirect(url_for('verify_2fa'))
 
+            audit('login_success', username_override=username)
             session['username'] = username
             return redirect(url_for('profile'))
 
+        audit('login_failed', username_override=username, details={'reason': 'bad_password'})
         return render_template('login.html', error="Неверный логин или пароль")
     return render_template('login.html')
 
@@ -319,6 +354,8 @@ def verify_2fa():
         user = db_manager.get_user(session['pending_2fa_user'])
         totp = pyotp.TOTP(user['totp_secret'])
         if totp.verify(code):
+            _u2fa = session.get('pending_2fa_user')
+            audit('login_2fa_success', username_override=_u2fa)
             session['username'] = session.pop('pending_2fa_user')
             return redirect(url_for('profile'))
         return render_template('2fa.html', error="Неверный код. Попробуйте снова.")
@@ -337,6 +374,7 @@ def setup_2fa():
         
     secret = pyotp.random_base32()
     db_manager.update_2fa_secret(session['username'], secret)
+    audit('2fa_enabled')
     
     uri = pyotp.totp.TOTP(secret).provisioning_uri(name=session['username'], issuer_name="AI-SecScan")
     img = qrcode.make(uri)
@@ -354,6 +392,7 @@ def api_disable_2fa():
     if not check_password_hash(user['password_hash'], data.get('password')):
         return jsonify({"error": "Неверный пароль"}), 403
     db_manager.disable_2fa(session['username'])
+    audit('2fa_disabled')
     return jsonify({"status": "success"})
 
 @app.route('/api/update_email', methods=['POST'])
@@ -364,6 +403,7 @@ def api_update_email():
     if not check_password_hash(user['password_hash'], data.get('password')):
         return jsonify({"error": "Неверный пароль"}), 403
     db_manager.update_user_email(session['username'], data.get('email'))
+    audit('email_changed', details={'new_email': data.get('email')})
     return jsonify({"status": "success", "message": "Email обновлен. Подтвердите новый адрес в логах."})
 
 @app.route('/api/update_password', methods=['POST'])
@@ -376,6 +416,7 @@ def api_update_password():
     
     new_hash = generate_password_hash(data.get('new_password'))
     db_manager.update_user_password(session['username'], new_hash)
+    audit('password_changed')
     return jsonify({"status": "success", "message": "Пароль успешно изменен!"})
 
 @app.route('/api/beta_feedback', methods=['POST'])
@@ -693,12 +734,14 @@ def generate_key():
     key_name = data.get('name', 'My API Key')
     new_key, error = db_manager.create_api_key(session['username'], key_name)
     if error: return jsonify({"error": error}), 403
+    audit('api_key_created', target=key_name, details={'key_prefix': new_key[:12] if new_key else None})
     return jsonify({"status": "success", "api_key": new_key})
 
 @app.route('/api/delete_key/<int:key_id>', methods=['DELETE'])
 def delete_key(key_id):
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
     db_manager.delete_api_key(key_id, session['username'])
+    audit('api_key_deleted', target=str(key_id))
     return jsonify({"status": "success"})
 
 @app.route('/api/webhook', methods=['POST'])
@@ -880,6 +923,7 @@ def api_admin_user_update(username):
     if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
     data = request.get_json()
     if db_manager.admin_update_user(username, data.get('field'), data.get('value')):
+        audit('admin_update_user', target=username, details={'field': data.get('field'), 'value': data.get('value')})
         return jsonify({"status": "success"})
     return jsonify({"error": "Ошибка обновления"}), 400
 
@@ -890,6 +934,7 @@ def api_admin_user_delete(username):
     if username == session['username']:
         return jsonify({"error": "Нельзя удалить самого себя"}), 400
     db_manager.admin_delete_user(username)
+    audit('admin_delete_user', target=username)
     return jsonify({"status": "success"})
 
 @app.route('/api/admin/user/<username>/reset_password', methods=['POST'])
@@ -900,6 +945,7 @@ def api_admin_user_reset_pwd(username):
     new_pwd = data.get('new_password', '')
     if len(new_pwd) < 6: return jsonify({"error": "Пароль должен быть от 6 символов"}), 400
     db_manager.admin_reset_password(username, generate_password_hash(new_pwd))
+    audit('admin_reset_password', target=username)
     return jsonify({"status": "success"})
 
 @app.route('/api/admin/invites')
@@ -920,6 +966,7 @@ def api_admin_invite_create():
         int(data.get('max_uses', 1)),
         int(data.get('days', 7))
     )
+    audit('admin_invite_create', target=code, details={'plan': data.get('plan', 'pro'), 'max_uses': data.get('max_uses', 1)})
     return jsonify({"status": "success", "code": code})
 
 @app.route('/api/admin/invite/<int:invite_id>/delete', methods=['POST'])
@@ -927,7 +974,45 @@ def api_admin_invite_delete(invite_id):
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
     if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
     db_manager.delete_invite(invite_id)
+    audit('admin_invite_delete', target=str(invite_id))
     return jsonify({"status": "success"})
+
+@app.route('/admin/audit')
+def admin_audit():
+    if 'username' not in session: return redirect(url_for('login'))
+    user = db_manager.get_user(session['username'])
+    if not user or not user['is_admin']:
+        return "Доступ запрещен. Только для администраторов.", 403
+    return render_template('audit.html', user=user)
+
+
+@app.route('/api/admin/audit')
+def api_admin_audit():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    username = request.args.get('user', '').strip() or None
+    action = request.args.get('action', '').strip() or None
+    try:
+        limit = min(int(request.args.get('limit', 100)), 500)
+        offset = max(int(request.args.get('offset', 0)), 0)
+    except ValueError:
+        limit, offset = 100, 0
+    rows = db_manager.get_audit_log(username=username, action=action, limit=limit, offset=offset)
+    total = db_manager.get_audit_count(username=username, action=action)
+    return jsonify({
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "rows": [dict(r) for r in rows],
+    })
+
+
+@app.route('/api/admin/audit/actions')
+def api_admin_audit_actions():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_admin(session['username']): return jsonify({"error": "Доступ запрещен"}), 403
+    return jsonify(db_manager.get_audit_actions())
+
 
 @app.route('/robots.txt')
 def robots_txt():
