@@ -110,6 +110,9 @@ def _init_db_postgres():
         cur.execute("CREATE TABLE IF NOT EXISTS invite_codes (id BIGSERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL, plan TEXT DEFAULT 'pro', created_by TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, used_by TEXT, used_at TIMESTAMP, expires_at TIMESTAMP, max_uses INTEGER DEFAULT 1, current_uses INTEGER DEFAULT 0)")
         cur.execute("CREATE TABLE IF NOT EXISTS sboms (username TEXT PRIMARY KEY, filename TEXT, sbom_json TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("CREATE TABLE IF NOT EXISTS audit_log (id BIGSERIAL PRIMARY KEY, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, username TEXT, action TEXT NOT NULL, target TEXT, details TEXT, ip_address TEXT, user_agent TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS organizations (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, owner_username TEXT NOT NULL, plan TEXT DEFAULT 'team', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        cur.execute("CREATE TABLE IF NOT EXISTS org_members (org_id BIGINT, username TEXT, role TEXT DEFAULT 'scanner', joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(org_id, username))")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_org_members_username ON org_members(username)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_username ON audit_log(username)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)")
@@ -158,6 +161,12 @@ def _init_db_sqlite():
         cursor.execute('''CREATE TABLE IF NOT EXISTS sboms (
             username TEXT PRIMARY KEY, filename TEXT, sbom_json TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
         
+        cursor.execute("CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, username TEXT, action TEXT NOT NULL, target TEXT, details TEXT, ip_address TEXT, user_agent TEXT)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS organizations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, owner_username TEXT NOT NULL, plan TEXT DEFAULT 'team', created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS org_members (org_id INTEGER, username TEXT, role TEXT DEFAULT 'scanner', joined_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(org_id, username))")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_org_members_username ON org_members(username)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_username ON audit_log(username)")
+
         conn.commit()
     finally:
         conn.close()
@@ -552,3 +561,122 @@ def get_audit_count(username=None, action=None):
         return conn.execute(q, params).fetchone()[0]
     finally:
         conn.close()
+
+
+# ============ ORGANIZATIONS ============
+def create_organization(name, owner_username, plan='team'):
+    """Создать организацию. Владелец автоматически добавляется как owner."""
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT INTO organizations (name, owner_username, plan) VALUES (?, ?, ?)",
+            (name, owner_username, plan),
+        )
+        conn.commit()
+        # Получаем org_id (для Postgres — RETURNING, для SQLite — lastrowid)
+        if hasattr(cur, 'lastrowid') and cur.lastrowid:
+            org_id = cur.lastrowid
+        else:
+            # Postgres: SELECT по owner_username + name (свежая запись)
+            row = conn.execute(
+                "SELECT id FROM organizations WHERE owner_username = ? AND name = ? ORDER BY id DESC LIMIT 1",
+                (owner_username, name),
+            ).fetchone()
+            org_id = row['id'] if row else None
+        if org_id:
+            conn.execute(
+                "INSERT INTO org_members (org_id, username, role) VALUES (?, ?, 'owner')",
+                (org_id, owner_username),
+            )
+            conn.commit()
+        return org_id
+    finally:
+        conn.close()
+
+
+def get_organization(org_id):
+    conn = get_db()
+    try:
+        return conn.execute("SELECT * FROM organizations WHERE id = ?", (org_id,)).fetchone()
+    finally:
+        conn.close()
+
+
+def get_user_orgs(username):
+    """Список организаций, в которых пользователь — член (с ролью)."""
+    conn = get_db()
+    try:
+        q = """SELECT o.id, o.name, o.owner_username, o.plan, o.created_at, m.role
+               FROM organizations o
+               JOIN org_members m ON m.org_id = o.id
+               WHERE m.username = ?
+               ORDER BY o.id"""
+        return conn.execute(q, (username,)).fetchall()
+    finally:
+        conn.close()
+
+
+def add_org_member(org_id, username, role='scanner'):
+    """Добавить пользователя в организацию."""
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO org_members (org_id, username, role) VALUES (?, ?, ?) ON CONFLICT(org_id, username) DO UPDATE SET role=excluded.role",
+            (org_id, username, role),
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[org] add_member failed: {e}", flush=True)
+        return False
+    finally:
+        conn.close()
+
+
+def remove_org_member(org_id, username):
+    """Удалить пользователя из организации (не owner'а)."""
+    conn = get_db()
+    try:
+        conn.execute(
+            "DELETE FROM org_members WHERE org_id = ? AND username = ? AND role != 'owner'",
+            (org_id, username),
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def get_org_members(org_id):
+    """Список членов организации (username, role, email, joined_at)."""
+    conn = get_db()
+    try:
+        q = """SELECT m.username, m.role, m.joined_at, u.email, u.plan
+               FROM org_members m
+               LEFT JOIN users u ON u.username = m.username
+               WHERE m.org_id = ?
+               ORDER BY
+                 CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'scanner' THEN 2 ELSE 3 END,
+                 m.username"""
+        return conn.execute(q, (org_id,)).fetchall()
+    finally:
+        conn.close()
+
+
+def get_user_role_in_org(org_id, username):
+    """Вернуть роль пользователя в организации или None."""
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT role FROM org_members WHERE org_id = ? AND username = ?",
+            (org_id, username),
+        ).fetchone()
+        return row['role'] if row else None
+    finally:
+        conn.close()
+
+
+def is_org_admin(org_id, username):
+    """True, если пользователь — owner или admin организации."""
+    role = get_user_role_in_org(org_id, username)
+    return role in ('owner', 'admin')

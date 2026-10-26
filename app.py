@@ -1015,6 +1015,108 @@ def api_admin_audit_actions():
     return jsonify(db_manager.get_audit_actions())
 
 
+# ============ ORGANIZATIONS API ============
+
+@app.route('/api/org/create', methods=['POST'])
+def api_org_create():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    user = db_manager.get_user(session['username'])
+    if user['plan'] not in ('startup', 'team', 'enterprise'):
+        return jsonify({"error": "Организации доступны на тарифах Startup, Team и Enterprise"}), 403
+
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name or len(name) < 2:
+        return jsonify({"error": "Имя организации минимум 2 символа"}), 400
+
+    org_id = db_manager.create_organization(name, session['username'], plan='team')
+    if not org_id:
+        return jsonify({"error": "Не удалось создать организацию"}), 500
+
+    audit('org_created', target=str(org_id), details={'name': name})
+    return jsonify({"status": "success", "org_id": org_id, "name": name})
+
+
+@app.route('/api/org/list', methods=['GET'])
+def api_org_list():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    orgs = db_manager.get_user_orgs(session['username'])
+    return jsonify([dict(o) for o in orgs])
+
+
+@app.route('/api/org/<int:org_id>/members', methods=['GET'])
+def api_org_members(org_id):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.get_user_role_in_org(org_id, session['username']):
+        return jsonify({"error": "Нет доступа к организации"}), 403
+    members = db_manager.get_org_members(org_id)
+    return jsonify([dict(m) for m in members])
+
+
+# ============ ORGANIZATIONS: MEMBER MANAGEMENT ============
+
+@app.route('/api/org/<int:org_id>/add_member', methods=['POST'])
+def api_org_add_member(org_id):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_org_admin(org_id, session['username']):
+        return jsonify({"error": "Только owner/admin могут добавлять участников"}), 403
+
+    data = request.get_json() or {}
+    target = (data.get('username') or '').strip()
+    role = data.get('role', 'scanner')
+    if role not in ('admin', 'scanner', 'viewer'):
+        return jsonify({"error": "Неверная роль"}), 400
+    if not target:
+        return jsonify({"error": "Укажите username"}), 400
+
+    user = db_manager.get_user(target)
+    if not user:
+        return jsonify({"error": f"Пользователь '{target}' не найден"}), 404
+
+    db_manager.add_org_member(org_id, target, role)
+    audit('org_member_added', target=target, details={'org_id': org_id, 'role': role})
+    return jsonify({"status": "success"})
+
+
+@app.route('/api/org/<int:org_id>/remove_member', methods=['POST'])
+def api_org_remove_member(org_id):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_org_admin(org_id, session['username']):
+        return jsonify({"error": "Только owner/admin могут удалять участников"}), 403
+
+    data = request.get_json() or {}
+    target = (data.get('username') or '').strip()
+    if not target:
+        return jsonify({"error": "Укажите username"}), 400
+    if target == session['username']:
+        return jsonify({"error": "Нельзя удалить себя"}), 400
+    if db_manager.get_user_role_in_org(org_id, target) == 'owner':
+        return jsonify({"error": "Нельзя удалить владельца организации"}), 400
+
+    db_manager.remove_org_member(org_id, target)
+    audit('org_member_removed', target=target, details={'org_id': org_id})
+    return jsonify({"status": "success"})
+
+
+@app.route('/api/org/<int:org_id>/change_role', methods=['POST'])
+def api_org_change_role(org_id):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if db_manager.get_user_role_in_org(org_id, session['username']) != 'owner':
+        return jsonify({"error": "Только owner может менять роли"}), 403
+
+    data = request.get_json() or {}
+    target = (data.get('username') or '').strip()
+    new_role = data.get('role', '')
+    if new_role not in ('admin', 'scanner', 'viewer'):
+        return jsonify({"error": "Неверная роль"}), 400
+    if not target or target == session['username']:
+        return jsonify({"error": "Нельзя менять свою роль"}), 400
+
+    db_manager.add_org_member(org_id, target, new_role)
+    audit('org_role_changed', target=target, details={'org_id': org_id, 'role': new_role})
+    return jsonify({"status": "success"})
+
+
 @app.route('/robots.txt')
 def robots_txt():
     from flask import Response
