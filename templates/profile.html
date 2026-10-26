@@ -268,7 +268,7 @@
                 {% endif %}
 
                 <div style="margin-top: 20px; background: #000; padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-muted); max-width: 800px;">
-                    <span style="color: #89b4fa;">curl</span> -X POST http://127.0.0.1:8080/api/v1/scan \<br>
+                    <span style="color: #89b4fa;">curl</span> -X POST https://aisecscan.by/api/v1/scan \<br>
                     &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Authorization: Bearer YOUR_KEY"</span> \<br>
                     &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Content-Type: application/json"</span> \<br>
                     &nbsp;&nbsp;-d <span style="color: #f9e2af;">'{"code": "eval(1)", "filename": "test.py"}'</span>
@@ -345,8 +345,8 @@
                         <h3>Free</h3>
                         <div class="price">0 <span>BYN</span></div>
                         <ul class="pricing-features">
-                            <li><i class="fa-solid fa-check"></i> 5 scans / day</li>
-                            <li><i class="fa-solid fa-check"></i> SAST</li>
+                            <li><i class="fa-solid fa-check"></i> {{ t('landing.price.free.f1') }}</li>
+                            <li><i class="fa-solid fa-check"></i> {{ t('landing.price.free.f2') }}</li>
                         </ul>
                         {% if user['plan'] != 'free' %}
                             <button class="btn-pricing outline" onclick="changePlan('free')">{{ t('profile.billing_btn') }}</button>
@@ -359,8 +359,8 @@
                         <h3>Pro</h3>
                         <div class="price">49 <span>BYN</span></div>
                         <ul class="pricing-features">
-                            <li><i class="fa-solid fa-check"></i> Unlimited scans</li>
-                            <li><i class="fa-solid fa-check"></i> AI Autofix</li>
+                            <li><i class="fa-solid fa-check"></i> {{ t('landing.price.pro.f1') }}</li>
+                            <li><i class="fa-solid fa-check"></i> {{ t('landing.price.pro.f2') }}</li>
                         </ul>
                         {% if user['plan'] != 'pro' %}
                             <button class="btn-pricing primary" onclick="changePlan('pro')">{{ t('profile.billing_btn') }}</button>
@@ -373,8 +373,8 @@
                         <h3>Startup</h3>
                         <div class="price">99 <span>BYN</span></div>
                         <ul class="pricing-features">
-                            <li><i class="fa-solid fa-check"></i> Up to 3 users</li>
-                            <li><i class="fa-solid fa-check"></i> 3 API keys</li>
+                            <li><i class="fa-solid fa-check"></i> {{ t('landing.price.startup.f2') }}</li>
+                            <li><i class="fa-solid fa-check"></i> {{ t('landing.price.startup.f3') }}</li>
                         </ul>
                         {% if user['plan'] != 'startup' %}
                             <button class="btn-pricing outline" style="border-color: #a6e3a1; color: #a6e3a1;" onclick="changePlan('startup')">{{ t('profile.billing_btn') }}</button>
@@ -387,8 +387,8 @@
                         <h3>Team</h3>
                         <div class="price">149 <span>BYN</span></div>
                         <ul class="pricing-features">
-                            <li><i class="fa-solid fa-check"></i> Up to 5 users</li>
-                            <li><i class="fa-solid fa-check"></i> Webhooks</li>
+                            <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f2') }}</li>
+                            <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f4') }}</li>
                         </ul>
                         {% if user['plan'] != 'team' %}
                             <button class="btn-pricing outline" style="border-color: #f9e2af; color: #f9e2af;" onclick="changePlan('team')">{{ t('profile.billing_btn') }}</button>

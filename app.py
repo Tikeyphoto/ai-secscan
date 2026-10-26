@@ -1,5 +1,9 @@
 ﻿import os
 import re
+import smtplib
+import threading
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import zipfile
 import tempfile
 import shutil
@@ -102,6 +106,36 @@ def upgrade():
         flash('Поздравляем! Вы перешли на тариф Pro.')
     return redirect(url_for('profile'))
 
+
+# --- НАСТРОЙКИ SENDPULSE SMTP ---
+SMTP_HOST = "mails.aisecscan.by"
+SMTP_PORT = 587
+SMTP_LOGIN = "no-reply@aisecscan.by"
+SMTP_PASSWORD = "_UQk)tjR87Zn"
+FROM_EMAIL = "info@aisecscan.by"
+DOMAIN_URL = "https://aisecscan.by"
+
+def send_email_async(to_email, subject, body_text):
+    def _send():
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        msg = MIMEMultipart()
+        msg['From'] = f"AI-SecScan <AI-SecScan <no-reply@aisecscan.by>>"
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body_text, 'plain', 'utf-8'))
+        try:
+            print(f"[EMAIL START] Попытка отправки на {to_email}", flush=True)
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+                server.starttls()
+                server.login(SMTP_LOGIN, SMTP_PASSWORD)
+                server.send_message(msg)
+            print(f"[EMAIL SUCCESS] Письмо отправлено на {to_email}", flush=True)
+        except Exception as e:
+            print(f"[EMAIL ERROR] Не удалось отправить письмо: {e}", flush=True)
+    threading.Thread(target=_send, daemon=True).start()
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -117,9 +151,10 @@ def register():
                 return render_template('register.html', error="Неверный или просроченный код приглашения.")
             plan = code_data['plan']
         
-        if db_manager.create_user(username, generate_password_hash(password), email, 1, plan):
+        if db_manager.create_user(username, generate_password_hash(password), email, 0, plan):
             if invite_code:
                 db_manager.use_invite(invite_code, username)
+            verify_link = f"{DOMAIN_URL}/verify/{username}"
             return render_template('login.html', error="Аккаунт успешно создан! Теперь вы можете войти.")
         return render_template('register.html', error="Пользователь уже существует")
     return render_template('register.html')
