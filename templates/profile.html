@@ -140,6 +140,9 @@
                 <button class="nav-btn" onclick="openTab(event, 'tab-faq')"><i class="fa-solid fa-circle-question"></i> {{ t('profile.faq') }}</button>
             
                 {% if user['is_admin'] == 1 %}
+                {% if user['plan'] in ['startup', 'team', 'enterprise'] %}
+                <a href="/org" class="nav-btn" style="text-decoration: none; color: #89b4fa; border: 1px solid #89b4fa; margin-top: 10px;"><i class="fa-solid fa-users"></i> Организация</a>
+                {% endif %}
                 <a href="/admin" class="nav-btn" style="text-decoration: none; color: #f9e2af; border: 1px solid #f9e2af; margin-top: 10px;"><i class="fa-solid fa-crown"></i> Админ-панель</a>
                 {% endif %}
                 </nav>

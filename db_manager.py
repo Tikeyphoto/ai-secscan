@@ -453,14 +453,21 @@ def admin_reset_password(username, new_hash):
     finally:
         conn.close()
 
-def create_invite(created_by, plan='pro', max_uses=1, days=7):
+def create_invite(created_by, plan='pro', max_uses=1, days=7, org_id=None, email=None):
     code = "INV-" + _uuid.uuid4().hex[:12].upper()
     expires = (_dt.now() + _td(days=days)).isoformat()
     conn = get_db()
     try:
-        conn.execute("INSERT INTO invite_codes (code, plan, created_by, max_uses, expires_at) VALUES (?, ?, ?, ?, ?)", (code, plan, created_by, max_uses, expires))
+        conn.execute("INSERT INTO invite_codes (code, plan, created_by, max_uses, expires_at, org_id, email) VALUES (?, ?, ?, ?, ?, ?, ?)", (code, plan, created_by, max_uses, expires, org_id, email))
         conn.commit()
         return code
+    finally:
+        conn.close()
+
+def get_invite(code):
+    conn = get_db()
+    try:
+        return conn.execute("SELECT * FROM invite_codes WHERE code = ?", (code,)).fetchone()
     finally:
         conn.close()
 
@@ -470,7 +477,21 @@ def validate_invite(code):
         row = conn.execute("SELECT * FROM invite_codes WHERE code = ?", (code,)).fetchone()
         if not row: return None
         if row['current_uses'] >= row['max_uses']: return None
-        if row['expires_at'] and _dt.fromisoformat(row['expires_at']) < _dt.now(): return None
+        
+        # Postgres возвращает datetime, SQLite - строку. Обрабатываем оба.
+        exp = row['expires_at']
+        if exp:
+            if isinstance(exp, str):
+                try:
+                    exp_dt = _dt.fromisoformat(exp)
+                except Exception:
+                    exp_dt = None
+            else:
+                exp_dt = exp
+            
+            if exp_dt and exp_dt < _dt.now():
+                return None
+        
         return row
     finally:
         conn.close()

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+    <meta charset="UTF-8">
+    <title>Организация - AI-SecScan</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+        function toggleTheme() {
+            const c = document.documentElement.getAttribute('data-theme');
+            const n = c === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', n);
+            localStorage.setItem('theme', n);
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const t = document.documentElement.getAttribute('data-theme');
+            document.querySelectorAll('.theme-icon').forEach(i => {
+                i.className = t === 'light' ? 'fa-solid fa-moon theme-icon' : 'fa-solid fa-sun theme-icon';
+            });
+        }
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+</head>
+<body style="overflow: auto;">
+    <nav class="navbar">
+        <div class="logo"><i class="fa-solid fa-users"></i> AI-SecScan · Организация</div>
+        <div class="user-nav">
+            <button onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; margin-right: 15px;"><i class="fa-solid fa-sun theme-icon"></i></button>
+            <a href="/profile" class="btn" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);"><i class="fa-solid fa-arrow-left"></i> В кабинет</a>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 40px; padding: 20px; max-width: 1200px;">
+
+        <div id="loadingState" style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin"></i> Загрузка...
+        </div>
+
+        <div id="noOrgState" class="card" style="display: none;">
+            <h2><i class="fa-solid fa-plus"></i> Создать организацию</h2>
+            <p style="color: var(--text-muted);">
+                {% if user['plan'] in ['startup', 'team', 'enterprise'] %}
+                Организация позволяет управлять командой: приглашать разработчиков, назначать роли (owner / admin / scanner / viewer).
+                {% else %}
+                <strong>⚠️ Организации доступны на тарифах Startup, Team и Enterprise.</strong>
+                {% endif %}
+            </p>
+            {% if user['plan'] in ['startup', 'team', 'enterprise'] %}
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <input type="text" id="newOrgName" placeholder="Название (например, AcmeCorp)" style="flex: 1; padding: 12px; background: var(--bg-base); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                <button class="btn" onclick="createOrg()" style="background: var(--primary);"><i class="fa-solid fa-plus"></i> Создать</button>
+            </div>
+            {% endif %}
+        </div>
+
+        <div id="orgState" data-me="{{ user['username'] }}" style="display: none;">
+            <div class="card" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h2 style="margin: 0;"><i class="fa-solid fa-building"></i> <span id="orgName">-</span></h2>
+                        <p style="color: var(--text-muted); margin: 5px 0 0;">Тариф: <strong id="orgPlan">-</strong> · Владелец: <strong id="orgOwner">-</strong></p>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-muted); font-size: 13px;">Ваша роль: </span>
+                        <span id="myRole" style="background: var(--primary); color: white; padding: 4px 10px; border-radius: 6px;">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;"><i class="fa-solid fa-users"></i> Участники</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn" id="addMemberBtn" onclick="showAddMember()" style="display: none; background: var(--primary);"><i class="fa-solid fa-user-plus"></i> Добавить</button>
+                        <button class="btn" id="inviteBtn" onclick="showInvite()" style="display: none; background: var(--success);"><i class="fa-solid fa-envelope"></i> Пригласить по email</button>
+                    </div>
+                </div>
+
+                <div id="addMemberForm" style="display: none; background: var(--bg-base); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: end;">
+                        <div style="flex: 1; min-width: 180px;">
+                            <label style="font-size: 12px; color: var(--text-muted);">Username</label>
+                            <input type="text" id="addMemberUsername" placeholder="username" style="width: 100%; padding: 10px; background: var(--bg-surface); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                        </div>
+                        <div style="min-width: 140px;">
+                            <label style="font-size: 12px; color: var(--text-muted);">Роль</label>
+                            <select id="addMemberRole" style="width: 100%; padding: 10px; background: var(--bg-surface); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                                <option value="scanner">Scanner</option>
+                                <option value="admin">Admin</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="addMember()" style="background: var(--success);">Добавить</button>
+                        <button class="btn" onclick="hideAddMember()" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted);">Отмена</button>
+                    </div>
+                </div>
+
+                <div id="inviteForm" style="display: none; background: var(--bg-base); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 0;">Мы отправим приглашение на email. После регистрации новый пользователь автоматически попадёт в вашу организацию с ролью <code>scanner</code>.</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: end;">
+                        <div style="flex: 1; min-width: 240px;">
+                            <label style="font-size: 12px; color: var(--text-muted);">Email</label>
+                            <input type="email" id="inviteEmail" placeholder="colleague@company.com" style="width: 100%; padding: 10px; background: var(--bg-surface); border: 1px solid var(--border); color: white; border-radius: 6px;">
+                        </div>
+                        <button class="btn" onclick="sendInvite()" style="background: var(--success);"><i class="fa-solid fa-paper-plane"></i> Отправить</button>
+                        <button class="btn" onclick="hideInvite()" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted);">Отмена</button>
+                    </div>
+                    <div id="inviteResult" style="margin-top: 12px; display: none;"></div>
+                </div>
+
+                <table class="history-table">
+                    <thead>
+                        <tr><th>Username</th><th>Email</th><th>Роль</th><th>В организации с</th><th>Действия</th></tr>
+                    </thead>
+                    <tbody id="membersTable">
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOrgId = null;
+        let currentRole = null;
+        const ME = document.getElementById('orgState').dataset.me;
+
+        async function loadOrg() {
+            try {
+                const r = await fetch('/api/org/list');
+                const orgs = await r.json();
+                if (!Array.isArray(orgs) || orgs.length === 0) {
+                    document.getElementById('loadingState').style.display = 'none';
+                    document.getElementById('noOrgState').style.display = 'block';
+                    return;
+                }
+                const org = orgs[0];
+                currentOrgId = org.id;
+                currentRole = org.role;
+                document.getElementById('orgName').textContent = org.name;
+                document.getElementById('orgPlan').textContent = org.plan.toUpperCase();
+                document.getElementById('orgOwner').textContent = org.owner_username;
+                document.getElementById('myRole').textContent = org.role;
+
+                if (currentRole === 'owner' || currentRole === 'admin') {
+                    document.getElementById('addMemberBtn').style.display = 'inline-flex';
+                    document.getElementById('inviteBtn').style.display = 'inline-flex';
+                }
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('orgState').style.display = 'block';
+                await loadMembers();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loadingState').innerHTML = '<div class="error-msg">Ошибка загрузки</div>';
+            }
+        }
+
+        async function loadMembers() {
+            const r = await fetch('/api/org/' + currentOrgId + '/members');
+            const members = await r.json();
+            const tbody = document.getElementById('membersTable');
+            if (!Array.isArray(members) || members.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Нет участников</td></tr>';
+                return;
+            }
+            tbody.innerHTML = members.map(m => {
+                const joined = (m.joined_at || '').slice(0, 10);
+                const canRemove = (currentRole === 'owner' || currentRole === 'admin') && m.role !== 'owner' && m.username !== ME;
+                const removeBtn = canRemove
+                    ? `<button class="btn" style="padding:4px 8px;font-size:11px;background:var(--danger);" onclick="removeMember('${m.username}')">Удалить</button>`
+                    : '';
+                return `<tr>
+                    <td><strong>${m.username}</strong>${m.username === ME ? ' (вы)' : ''}</td>
+                    <td>${m.email || '—'}</td>
+                    <td><span style="background:var(--bg-base);padding:2px 8px;border-radius:4px;font-size:12px;">${m.role}</span></td>
+                    <td>${joined}</td>
+                    <td>${removeBtn}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function createOrg() {
+            const name = document.getElementById('newOrgName').value.trim();
+            if (name.length < 2) return alert('Имя минимум 2 символа');
+            const r = await fetch('/api/org/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const d = await r.json();
+            if (!r.ok) return alert(d.error || 'Ошибка');
+            location.reload();
+        }
+
+        function showAddMember() { document.getElementById('addMemberForm').style.display = 'block'; }
+        function hideAddMember() {
+            document.getElementById('addMemberForm').style.display = 'none';
+            document.getElementById('addMemberUsername').value = '';
+        }
+
+        async function addMember() {
+            const username = document.getElementById('addMemberUsername').value.trim();
+            const role = document.getElementById('addMemberRole').value;
+            if (!username) return alert('Введите username');
+            const r = await fetch('/api/org/' + currentOrgId + '/add_member', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, role })
+            });
+            const d = await r.json();
+            if (!r.ok) return alert(d.error || 'Ошибка');
+            hideAddMember();
+            await loadMembers();
+        }
+
+        function showInvite() { document.getElementById('inviteForm').style.display = 'block'; }
+        function hideInvite() {
+            document.getElementById('inviteForm').style.display = 'none';
+            document.getElementById('inviteEmail').value = '';
+            document.getElementById('inviteResult').style.display = 'none';
+        }
+
+        async function sendInvite() {
+            const email = document.getElementById('inviteEmail').value.trim();
+            if (!email || email.indexOf('@') === -1) return alert('Введите корректный email');
+            const resDiv = document.getElementById('inviteResult');
+            resDiv.style.display = 'block';
+            resDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Отправка...';
+
+            const r = await fetch('/api/org/' + currentOrgId + '/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const d = await r.json();
+            if (!r.ok) {
+                resDiv.innerHTML = `<div class="error-msg">${d.error || 'Ошибка'}</div>`;
+                return;
+            }
+            const link = window.location.origin + '/register?invite=' + d.code;
+            const status = d.email_status === 'sent'
+                ? '✅ Письмо отправлено на ' + email
+                : '⚠️ Письмо не отправлено. Скопируйте ссылку вручную:';
+            resDiv.innerHTML = `<div style="padding:10px;background:rgba(16,185,129,0.1);border-radius:6px;border:1px solid var(--success);">
+                <div style="margin-bottom:8px;">${status}</div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <code style="flex:1;padding:8px;background:var(--bg-surface);border-radius:4px;font-size:12px;word-break:break-all;">${link}</code>
+                    <button class="btn" style="padding:6px 10px;font-size:12px;" onclick="navigator.clipboard.writeText('${link}');this.textContent='✓'">Копировать</button>
+                </div>
+            </div>`;
+            document.getElementById('inviteEmail').value = '';
+        }
+
+        async function removeMember(username) {
+            if (!confirm('Удалить ' + username + ' из организации?')) return;
+            const r = await fetch('/api/org/' + currentOrgId + '/remove_member', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            const d = await r.json();
+            if (!r.ok) return alert(d.error || 'Ошибка');
+            await loadMembers();
+        }
+
+        loadOrg();
+    </script>
+</body>
+</html>

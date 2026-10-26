@@ -268,6 +268,13 @@ def register():
         if db_manager.create_user(username, generate_password_hash(password), email, 0, plan):
             if invite_code:
                 db_manager.use_invite(invite_code, username)
+                try:
+                    inv = db_manager.get_invite(invite_code)
+                    if inv and inv['org_id']:
+                        db_manager.add_org_member(inv['org_id'], username, 'scanner')
+                        print(f"[REGISTER] {username} auto-joined org {inv['org_id']}", flush=True)
+                except Exception as e:
+                    print(f"[REGISTER] org auto-join failed: {e}", flush=True)
             verify_link = f"{DOMAIN_URL}/verify/{username}"
             audit('register', target=username, username_override=username, details={'email': email, 'plan': plan})
             email_body = (
@@ -1017,6 +1024,14 @@ def api_admin_audit_actions():
 
 # ============ ORGANIZATIONS API ============
 
+@app.route('/org')
+def org_page():
+    if 'username' not in session: return redirect(url_for('login'))
+    user = db_manager.get_user(session['username'])
+    if not user: return redirect(url_for('login'))
+    return render_template('org.html', user=user)
+
+
 @app.route('/api/org/create', methods=['POST'])
 def api_org_create():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
@@ -1042,6 +1057,53 @@ def api_org_list():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
     orgs = db_manager.get_user_orgs(session['username'])
     return jsonify([dict(o) for o in orgs])
+
+
+@app.route('/api/org/<int:org_id>/invite', methods=['POST'])
+def api_org_invite(org_id):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    if not db_manager.is_org_admin(org_id, session['username']):
+        return jsonify({"error": "Только owner/admin могут приглашать"}), 403
+
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+    if not email or '@' not in email:
+        return jsonify({"error": "Укажите корректный email"}), 400
+
+    org = db_manager.get_organization(org_id)
+    if not org:
+        return jsonify({"error": "Организация не найдена"}), 404
+
+    # Создаём инвайт с привязкой к org
+    code = db_manager.create_invite(
+        created_by=session['username'],
+        plan=org['plan'],
+        max_uses=1,
+        days=7,
+        org_id=org_id,
+        email=email
+    )
+
+    verify_link = f"{DOMAIN_URL}/register?invite={code}"
+    body = (
+        f"Здравствуйте!\n\n"
+        f"{session['username']} приглашает вас в организацию \"{org['name']}\" на платформе AI-SecScan.\n\n"
+        f"Зарегистрируйтесь по ссылке (или введите код вручную):\n"
+        f"{verify_link}\n\n"
+        f"Код приглашения: {code}\n\n"
+        f"Ссылка действует 7 дней.\n\n"
+        f"--\nКоманда AI-SecScan\nhttps://aisecscan.by"
+    )
+
+    try:
+        send_email_async(email, f"Приглашение в {org['name']} (AI-SecScan)", body)
+        email_status = "sent"
+    except Exception as e:
+        print(f"[INVITE] email failed: {e}", flush=True)
+        email_status = "failed"
+
+    audit('org_invite_sent', target=email, details={'org_id': org_id, 'code': code})
+    return jsonify({"status": "success", "code": code, "email_status": email_status})
 
 
 @app.route('/api/org/<int:org_id>/members', methods=['GET'])

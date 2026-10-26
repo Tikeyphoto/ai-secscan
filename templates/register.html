@@ -50,5 +50,21 @@
             <a href="/login" class="auth-link">{{ t('register.have_account') }}</a>
         </div>
     </div>
+    <script>
+        // Автозаполнение инвайт-кода из URL (?invite=INV-XXXX)
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteCode = urlParams.get('invite');
+            if (inviteCode) {
+                const input = document.querySelector('input[name="invite_code"]');
+                if (input) {
+                    input.value = inviteCode;
+                    // Подсветим, чтобы было видно
+                    input.style.borderColor = 'var(--success)';
+                    input.style.background = 'rgba(16, 185, 129, 0.1)';
+                }
+            }
+        });
+    </script>
 </body>
 </html>
