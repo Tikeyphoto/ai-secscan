@@ -159,7 +159,8 @@ def register():
             if invite_code:
                 db_manager.use_invite(invite_code, username)
             verify_link = f"{DOMAIN_URL}/verify/{username}"
-            return render_template('login.html', error="Аккаунт успешно создан! Теперь вы можете войти.")
+            flash("Аккаунт успешно создан! Теперь вы можете войти.")
+            return redirect(url_for('login'))
         return render_template('register.html', error="Пользователь уже существует")
     return render_template('register.html')
 

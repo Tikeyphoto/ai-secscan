@@ -32,6 +32,13 @@
     <div class="auth-wrapper">
         <div class="auth-box">
             <h2><i class="fa-solid fa-shield-halved"></i> Вход</h2>
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  <div class="error-msg" style="background: rgba(16, 185, 129, 0.2); color: var(--success); border-color: var(--success);">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
             {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
             <form method="POST">
                 <input type="text" name="username" placeholder="Логин" required>
