@@ -53,9 +53,10 @@
             <a href="#pricing">{{ t('nav.pricing') }}</a>
             <a href="#faq">{{ t('nav.faq') }}</a>
             
-            <button id="theme-btn" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; margin-right: 15px;"><i class="fa-solid fa-sun theme-icon"></i></button><select onchange="window.location.href='/set_lang/'+this.value" class="lang-select">
-                <option value="en" {% if current_lang == 'en' %}selected{% endif %}>🇬🇧 EN</option>
+            <button id="theme-btn" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; margin-right: 15px;"><i class="fa-solid fa-sun theme-icon"></i></button><select onchange="window.location.href='/set_lang/'+this.value" class="lang-select" style="margin-right: 15px;">
                 <option value="ru" {% if current_lang == 'ru' %}selected{% endif %}>🇷🇺 RU</option>
+                <option value="en" {% if current_lang == 'en' %}selected{% endif %}>🇬🇧 EN</option>
+                <option value="zh" {% if current_lang == 'zh' %}selected{% endif %}>🇨🇳 中文</option>
             </select>
 
             <a href="/login" class="btn-nav">{{ t('nav.login') }}</a>

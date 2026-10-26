@@ -43,14 +43,14 @@ ai_scanner = AIEngine()
 
 @app.context_processor
 def inject_translations():
-    lang = session.get('lang', 'en')
+    lang = session.get('lang', 'ru')
     def t(key):
         return TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
     return dict(t=t, current_lang=lang)
 
 @app.route('/set_lang/<lang_code>')
 def set_lang(lang_code):
-    if lang_code in ['ru', 'en']: session['lang'] = lang_code
+    if lang_code in ['ru', 'en', 'zh']: session['lang'] = lang_code
     return redirect(request.referrer or url_for('index'))
 
 def safe_extract_zip(zip_path, extract_dir):
