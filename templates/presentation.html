@@ -56,10 +56,10 @@
 </head>
 <body>
 <div class="progress" id="progress"></div>
-<div class="slide-counter" id="counter">1 / 10</div>
+<div class="slide-counter" id="counter">1 / 11</div>
 
 <div class="slide active center" style="text-align: center; align-items: center;">
-    <div class="logo" style="justify-content: center;"><div class="logo-shield"></div><span>AI-SecScan</span><span class="beta-tag">Beta 0.9</span></div>
+    <div class="logo" style="justify-content: center;"><div class="logo-shield"></div><span>AI-SecScan</span><span class="beta-tag">Beta 1.0</span></div>
     <p style="font-size: 28px; color: #a6adc8; max-width: 800px; margin: 20px auto;">Умный аудит безопасности кода на базе <strong style="color: #cba6f7;">локального ИИ</strong></p>
     <p style="font-size: 20px; color: #89b4fa; margin-top: 30px;">🔒 aisecscan.by</p>
     <p style="font-size: 14px; color: #6c7086; margin-top: 60px;">Нажмите → или используйте стрелки клавиатуры</p>
@@ -103,7 +103,8 @@
     <ul>
         <li><strong>5 языков</strong>: Python, JavaScript, TypeScript, PHP, Java.</li>
         <li><strong>Secret Scanner</strong>: находит забытые ключи AWS, токены Telegram, пароли в конфигах.</li>
-        <li><strong>SCA (анализ зависимостей)</strong>: проверяет requirements.txt на известные CVE.</li>
+        <li><strong>SCA (анализ зависимостей)</strong>: поддержка Python, Node.js, Go и Java (requirements.txt, package.json, go.mod, pom.xml).</li>
+        <li><strong>Compliance</strong>: автоматический маппинг на OWASP Top 10, CWE и PCI DSS в PDF-отчетах.</li>
         <li><strong>IaC Scanning</strong>: ищет уязвимости в Dockerfile (root-пользователь, latest-тег).</li>
         <li><strong>Экспорт</strong>: PDF, JSON и SARIF (для Jira, GitHub Security и CI/CD).</li>
     </ul>
@@ -133,10 +134,21 @@
 </div>
 
 <div class="slide">
+    <div class="badge">🏢 Для бизнеса</div>
+    <h2>Enterprise-уровень</h2>
+    <ul class="feature-list">
+        <li><strong>Организации (RBAC)</strong>: управление командами, роли (owner/admin/scanner/viewer), совместные сканы.</li>
+        <li><strong>Audit Log</strong>: журнал всех действий (вход, сканы, смена тарифов) для соответствия требованиям безопасности.</li>
+        <li><strong>PostgreSQL + Celery</strong>: надежная база данных и фоновая обработка тяжелых сканов без блокировки интерфейса.</li>
+        <li><strong>Compliance</strong>: автоматический маппинг уязвимостей на OWASP Top 10, CWE и PCI DSS.</li>
+    </ul>
+</div>
+
+<div class="slide">
     <div class="badge">🗺️ Планы</div>
     <h2>Статус и Roadmap</h2>
     <div class="roadmap">
-        <div class="roadmap-item done"><div class="date">Октябрь 2026</div><div class="title">Beta 0.9 запущена</div><p style="font-size: 13px; margin-top: 8px; color: #a6adc8;">Сайт работает, все PRO-функции бесплатны.</p></div>
+        <div class="roadmap-item done"><div class="date">Октябрь 2026</div><div class="title">Beta 1.0 запущена</div><p style="font-size: 13px; margin-top: 8px; color: #a6adc8;">Сайт работает. Добавлены RBAC, Audit Log, Celery, PostgreSQL.</p></div>
         <div class="roadmap-item"><div class="date">Декабрь 2026</div><div class="title">Платный релиз</div><p style="font-size: 13px; margin-top: 8px; color: #a6adc8;">Ввод подписок, расширение базы CVE.</p></div>
         <div class="roadmap-item future"><div class="date">2027</div><div class="title">Интеграции</div><p style="font-size: 13px; margin-top: 8px; color: #a6adc8;">GitLab, Telegram-бот для алертов, Kubernetes.</p></div>
     </div>
@@ -148,7 +160,7 @@
     <div class="grid-2">
         <div>
             <ul>
-                <li><strong>Backend</strong>: Python, Flask, Gunicorn, SQLite</li>
+                <li><strong>Backend</strong>: Python, Flask, Gunicorn, PostgreSQL, Redis, Celery</li>
                 <li><strong>Frontend</strong>: HTML5, Vanilla JS, Chart.js</li>
                 <li><strong>AI</strong>: Ollama + Qwen 2.5 Coder (локально)</li>
                 <li><strong>Инфраструктура</strong>: Docker, Docker Compose</li>
