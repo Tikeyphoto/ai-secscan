@@ -693,6 +693,38 @@
             }
         }
 
+        async function pollScanAsync(taskId, scansLeft) {
+            const statusUrl = '/api/scan_async/status/' + taskId;
+            let attempts = 0;
+            const maxAttempts = 150; // 5 минут
+            const stageMap = {
+                'decoding': 'Распаковка архива...',
+                'scanning': 'Сканирование кода...',
+                'analyzing': 'AI-анализ...'
+            };
+            while (attempts < maxAttempts) {
+                await new Promise(r => setTimeout(r, 2000));
+                attempts++;
+                const r = await fetch(statusUrl);
+                const s = await r.json();
+                if (!r.ok) throw new Error(s.error || ('HTTP ' + r.status));
+
+                if (s.state === 'PROGRESS' && s.progress && s.progress.stage) {
+                    const pt = document.getElementById('progressText');
+                    if (pt) pt.innerText = stageMap[s.progress.stage] || 'Обработка...';
+                }
+                if (s.state === 'SUCCESS') {
+                    const data = s.result || {};
+                    data.scans_left = scansLeft;
+                    return data;
+                }
+                if (s.state === 'FAILURE') {
+                    throw new Error(s.error || 'Сканирование не удалось');
+                }
+            }
+            throw new Error('Таймаут: скан занял больше 5 минут');
+        }
+
         async function scanFile() {
             if (!fileInput.files.length) return;
             const formData = new FormData();
@@ -701,11 +733,12 @@
             
             showLoading();
             try {
-                const response = await fetch('/api/scan', { method: 'POST', body: formData });
-                const data = await response.json();
+                const response = await fetch('/api/scan_async', { method: 'POST', body: formData });
+                const initData = await response.json();
+                if (!response.ok) { hideLoading(); handleError(response.status, initData); return; }
+                const result = await pollScanAsync(initData.task_id, initData.scans_left);
                 hideLoading();
-                if (!response.ok) { handleError(response.status, data); return; }
-                handleResponse(data);
+                handleResponse(result);
             } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">${e.message}</div>`; }
         }
 
@@ -714,15 +747,16 @@
             if (!code.trim()) return alert("Введите код!");
             showLoading();
             try {
-                const response = await fetch('/api/scan', {
+                const response = await fetch('/api/scan_async', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code: code, use_ai: document.getElementById('useAi').checked })
                 });
-                const data = await response.json();
+                const initData = await response.json();
+                if (!response.ok) { hideLoading(); handleError(response.status, initData); return; }
+                const result = await pollScanAsync(initData.task_id, initData.scans_left);
                 hideLoading();
-                if (!response.ok) { handleError(response.status, data); return; }
-                handleResponse(data);
+                handleResponse(result);
             } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">${e.message}</div>`; }
         }
 
