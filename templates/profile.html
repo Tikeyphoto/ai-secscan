@@ -775,7 +775,13 @@
             
             errors.forEach(e => { html += `<div class="error-msg">🚫 ${e.error}</div>`; });
 
-            html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        if (data.filename && data.filename !== 'Anonymous Project' && !isHistorical) {
+                html += `<div style="margin: 10px 0; padding: 10px 14px; background: var(--bg-surface); border-left: 3px solid var(--success); border-radius: 6px; font-size: 14px;">📁 <strong>Проект:</strong> ${data.filename}</div>`;
+            }
+            if (data.filename === 'Anonymous Project' && !isHistorical) {
+                html += `<div style="margin: 10px 0; padding: 12px 16px; background: rgba(99,102,241,0.1); border: 1px solid var(--primary); border-radius: 8px; font-size: 14px;">🔒 <strong>Free-тариф:</strong> имена проектов скрыты. <a href="/upgrade" style="color: var(--primary); text-decoration: underline;">Апгрейд до Pro</a> — чтобы видеть историю по проектам.</div>`;
+            }
+html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
                         <a href="/api/report/pdf" class="btn" style="background: #e11d48;"><i class="fa-solid fa-file-pdf"></i> ${i18n.btn_pdf}</a>
                         <a href="/api/report/json" class="btn" style="background: var(--success);"><i class="fa-brands fa-js"></i> ${i18n.btn_json}</a>
                         <a href="/api/report/sarif" class="btn" style="background: #3b82f6;"><i class="fa-solid fa-shield"></i> ${i18n.btn_sarif}</a>

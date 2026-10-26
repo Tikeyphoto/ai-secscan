@@ -305,11 +305,15 @@ def upgrade_user_plan(username):
     finally: conn.close()
 
 def save_scan_report(username, filename, findings):
+    user = get_user(username)
+    stored_name = "Anonymous Project"
+    if user and user['plan'] != 'free':
+        stored_name = filename or "Unnamed Project"
     conn = get_db()
     try:
         findings_json = json.dumps(findings, ensure_ascii=False)
-        conn.execute('''INSERT INTO scan_reports (username, filename, findings_json) VALUES (?, 'Anonymous Project', ?) ON CONFLICT(username) DO UPDATE SET filename=excluded.filename, findings_json=excluded.findings_json, timestamp=CURRENT_TIMESTAMP''', (username, findings_json))
-        conn.execute("INSERT INTO scans (username, filename, findings_count) VALUES (?, ?, ?)", (username, 'Anonymous Project', len(findings)))
+        conn.execute('''INSERT INTO scan_reports (username, filename, findings_json) VALUES (?, ?, ?) ON CONFLICT(username) DO UPDATE SET filename=excluded.filename, findings_json=excluded.findings_json, timestamp=CURRENT_TIMESTAMP''', (username, stored_name, findings_json))
+        conn.execute("INSERT INTO scans (username, filename, findings_count) VALUES (?, ?, ?)", (username, stored_name, len(findings)))
         conn.commit()
     finally: conn.close()
 
