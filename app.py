@@ -83,6 +83,10 @@ def demo():
     session['username'] = 'demo_user'
     return redirect(url_for('profile'))
 
+@app.route('/presentation')
+def presentation():
+    return render_template('presentation.html')
+
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
