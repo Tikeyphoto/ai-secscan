@@ -184,8 +184,8 @@ textarea:focus { outline: none; border-color: var(--primary); }
 .hero-visual { flex: 1; perspective: 1000px; }
 .mockup-window { background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 30px 60px rgba(0,0,0,0.5); overflow: hidden; transform: rotateY(-10deg) rotateX(5deg); transition: 0.5s; }
 .mockup-window:hover { transform: rotateY(0) rotateX(0); }
-.mockup-header { background: #11111b; padding: 12px; display: flex; gap: 8px; }
-.mockup-header span { width: 12px; height: 12px; border-radius: 50%; background: #45475a; }
+.mockup-header { background: var(--bg-base); padding: 12px; display: flex; gap: 8px; }
+.mockup-header span { width: 12px; height: 12px; border-radius: 50%; background: var(--text-muted); opacity: 0.5; }
 .mockup-header span:nth-child(1) { background: #f38ba8; }
 .mockup-header span:nth-child(2) { background: #f9e2af; }
 .mockup-header span:nth-child(3) { background: #a6e3a1; }

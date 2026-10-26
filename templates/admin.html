@@ -194,8 +194,8 @@
                         '<td>' + verifyBtn + '</td>' +
                         '<td>' + (u.is_admin ? '👑' : '-') + '</td>' +
                         '<td style="white-space: nowrap;">' +
-                        '<button class="btn" style="padding: 4px 8px; font-size: 11px; background: #f59e0b;" onclick="resetPassword(\'' + u.username + '\')">🔑</button> ' +
-                        '<button class="btn" style="padding: 4px 8px; font-size: 11px; background: #ef4444;" onclick="deleteUser(\'' + u.username + '\')">🗑</button>' +
+                        '<button class="btn" style="padding: 4px 8px; font-size: 11px; background: var(--warning);" onclick="resetPassword(\'' + u.username + '\')">🔑</button> ' +
+                        '<button class="btn" style="padding: 4px 8px; font-size: 11px; background: var(--danger);" onclick="deleteUser(\'' + u.username + '\')">🗑</button>' +
                         '</td></tr>';
                 });
                 document.getElementById('usersTable').innerHTML = html;

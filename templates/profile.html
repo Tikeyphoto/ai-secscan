@@ -39,12 +39,12 @@
         .badge.HIGH { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
         .badge.MEDIUM { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid #fbbf24; }
         .badge.AI_LOGIC_FLAW { background: rgba(168, 85, 247, 0.2); color: var(--ai-color); border: 1px solid var(--ai-color); }
-        .code-block { background: #000; padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #a6e3a1; overflow-x: auto; margin-top: 10px; border: 1px solid #222; }
+        .code-block { background: var(--bg-base); padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--success); overflow-x: auto; margin-top: 10px; border: 1px solid var(--border); }
         .btn-fix { background: transparent; border: 1px solid var(--ai-color); color: var(--ai-color); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
         .btn-fix:hover { background: var(--ai-color); color: white; }
         .fix-container { margin-top: 15px; display: none; }
         .fix-header { font-size: 13px; color: var(--ai-color); font-weight: 600; margin-bottom: 5px; }
-        .code-block-fixed { background: #000; padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #a6e3a1; overflow-x: auto; border: 1px solid var(--ai-color); box-shadow: 0 0 10px rgba(168, 85, 247, 0.2); }
+        .code-block-fixed { background: var(--bg-base); padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--success); overflow-x: auto; border: 1px solid var(--ai-color); box-shadow: 0 0 10px rgba(168, 85, 247, 0.2); }
         .spinner { display: none; width: 40px; height: 40px; border: 4px solid rgba(99, 102, 241, 0.3); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
@@ -77,18 +77,7 @@
             });
         }
         document.addEventListener('DOMContentLoaded', updateThemeIcon);
-
-        
-, 2000);
-            });
-        }
-
-
-        
-
-
-        
-
+        setInterval(updateThemeIcon, 2000);
 
         async function generateGitHubAction() {
             try {
@@ -211,7 +200,7 @@
 
                 <div style="margin-top: 20px;">
                     <p style="margin-top: 0; color: var(--text-muted); font-size: 14px;">{{ t('profile.or_paste') }}</p>
-                    <textarea id="codeInput" placeholder="def my_function():\n    pass" style="width: 100%; height: 150px; background: var(--bg-base); color: #a6e3a1; border: 1px solid var(--border); padding: 15px; font-family: 'JetBrains Mono', monospace; border-radius: 8px; resize: vertical;"></textarea>
+                    <textarea id="codeInput" placeholder="def my_function():\n    pass" style="width: 100%; height: 150px; background: var(--bg-base); color: var(--text-main); border: 1px solid var(--border); padding: 15px; font-family: 'JetBrains Mono', monospace; border-radius: 8px; resize: vertical;"></textarea>
                     <div style="text-align: right; margin-top: 10px;">
                         <button class="btn" onclick="scanCode()"><i class="fa-solid fa-code"></i> {{ t('profile.btn_scan') }}</button>
                     </div>
@@ -224,7 +213,7 @@
                         <span id="progressText" style="font-size: 14px; color: var(--text-main);">Анализ кода...</span>
                         <span id="progressPercent" style="font-size: 14px; color: var(--primary); font-weight: bold;">0%</span>
                     </div>
-                    <div style="width: 100%; height: 10px; background: #11111b; border-radius: 5px; overflow: hidden;">
+                    <div style="width: 100%; height: 10px; background: var(--bg-surface); border-radius: 5px; overflow: hidden;">
                         <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #89b4fa, #cba6f7); transition: width 0.4s ease;"></div>
                     </div>
                 </div>
@@ -288,7 +277,7 @@
                 {% else %}
                     <div style="margin-top: 20px;">
                         {% for key in user_api_keys %}
-                        <div class="rule-item" style="background: #11111b; border-color: var(--primary);">
+                        <div class="rule-item" style="background: var(--bg-base); border-color: var(--primary);">
                             <div class="rule-info">
                                 <span class="rule-title" style="color: var(--primary);"><i class="fa-solid fa-key"></i> {{ key['name'] }}</span>
                                 <span class="rule-pattern">{{ key['api_key'] }}</span>
@@ -311,10 +300,10 @@
                     {% endif %}
                 {% endif %}
 
-                <div style="margin-top: 20px; background: #000; padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-muted); max-width: 800px;">
-                    <span style="color: #89b4fa;">curl</span> -X POST https://aisecscan.by/api/v1/scan \<br>
-                    &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Authorization: Bearer YOUR_KEY"</span> \<br>
-                    &nbsp;&nbsp;-H <span style="color: #a6e3a1;">"Content-Type: application/json"</span> \<br>
+                <div style="margin-top: 20px; background: var(--bg-base); padding: 15px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-muted); max-width: 800px;">
+                    <span style="color: var(--primary);">curl</span> -X POST https://aisecscan.by/api/v1/scan \<br>
+                    &nbsp;&nbsp;-H <span style="color: var(--success);">"Authorization: Bearer YOUR_KEY"</span> \<br>
+                    &nbsp;&nbsp;-H <span style="color: var(--success);">"Content-Type: application/json"</span> \<br>
                     &nbsp;&nbsp;-d <span style="color: #f9e2af;">'{"code": "eval(1)", "filename": "test.py"}'</span>
                 </div>
             </div>
