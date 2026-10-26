@@ -23,6 +23,7 @@ from scanner.ai_engine import AIEngine
 from report_generator import ReportGenerator
 from sbom_generator import SBOMGenerator
 import db_manager
+import scan_core
 from translations import TRANSLATIONS
 
 app = Flask(__name__)
@@ -472,12 +473,12 @@ def scan():
                     filepath = os.path.join(root, f)
                     rel_path = os.path.relpath(filepath, extract_dir)
                     
-                    if f == 'requirements.txt':
-                        with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
-                            req_content = req_file.read()
-                            sca_findings = sca_scanner.scan_requirements(req_content)
-                            for sca_f in sca_findings: sca_f["file"] = rel_path
-                            findings.extend(sca_findings)
+                    if f in scan_core.DEPENDENCY_FILES:
+                        sca_findings = scan_core.process_dependency_file(filepath, rel_path)
+                        findings.extend(sca_findings)
+                        if f == 'requirements.txt':
+                            with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
+                                req_content = req_file.read()
                             sbom_data = SBOMGenerator.generate_cyclonedx(req_content, filename)
                             db_manager.save_sbom(username, filename, sbom_data)
                     elif any(f.endswith(ext) for ext in allowed_exts) or f.lower() == 'dockerfile':
@@ -648,12 +649,12 @@ def scan_github():
                 if rel_path.startswith(top_folder):
                     rel_path = rel_path[len(top_folder):].lstrip('/\\')
 
-                if f == 'requirements.txt':
-                    with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
-                        req_content = req_file.read()
-                        sca_findings = sca_scanner.scan_requirements(req_content)
-                        for sca_f in sca_findings: sca_f["file"] = rel_path
-                        findings.extend(sca_findings)
+                if f in scan_core.DEPENDENCY_FILES:
+                    sca_findings = scan_core.process_dependency_file(filepath, rel_path)
+                    findings.extend(sca_findings)
+                    if f == 'requirements.txt':
+                        with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
+                            req_content = req_file.read()
                         sbom_data = SBOMGenerator.generate_cyclonedx(req_content, filename)
                         db_manager.save_sbom(username, filename, sbom_data)
                 elif any(f.endswith(ext) for ext in allowed_exts) or f.lower() == 'dockerfile':

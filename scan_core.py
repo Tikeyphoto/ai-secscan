@@ -56,6 +56,33 @@ def process_scan(username, filename, code, use_ai, user_baselines, custom_rules)
 
 
 
+DEPENDENCY_FILES = ['requirements.txt', 'package.json', 'go.mod', 'pom.xml']
+
+def process_dependency_file(filepath, rel_path):
+    """Читает файл зависимостей и возвращает findings (SCA)."""
+    try:
+        with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as f:
+            content = f.read()
+    except Exception:
+        return []
+    
+    filename = os.path.basename(filepath)
+    findings = []
+    
+    if filename == 'requirements.txt':
+        findings = sca_scanner.scan_requirements(content)
+    elif filename == 'package.json':
+        findings = sca_scanner.scan_package_json(content)
+    elif filename == 'go.mod':
+        findings = sca_scanner.scan_go_mod(content)
+    elif filename == 'pom.xml':
+        findings = sca_scanner.scan_pom_xml(content)
+        
+    for f in findings:
+        f["file"] = rel_path
+    return findings
+
+
 def scan_zip(username, zip_path, filename, use_ai=False):
     """Полный скан ZIP-проекта. Возвращает (findings, score, grade).
 
@@ -78,15 +105,14 @@ def scan_zip(username, zip_path, filename, use_ai=False):
                 filepath = os.path.join(root, f)
                 rel_path = os.path.relpath(filepath, extract_dir)
 
-                if f == 'requirements.txt':
-                    with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
-                        req_content = req_file.read()
-                    sca_findings = sca_scanner.scan_requirements(req_content)
-                    for sca_f in sca_findings:
-                        sca_f["file"] = rel_path
+                if f in DEPENDENCY_FILES:
+                    sca_findings = process_dependency_file(filepath, rel_path)
                     findings.extend(sca_findings)
-                    sbom_data = SBOMGenerator.generate_cyclonedx(req_content, filename)
-                    db_manager.save_sbom(username, filename, sbom_data)
+                    if f == 'requirements.txt':
+                        with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as req_file:
+                            req_content = req_file.read()
+                        sbom_data = SBOMGenerator.generate_cyclonedx(req_content, filename)
+                        db_manager.save_sbom(username, filename, sbom_data)
                 elif any(f.endswith(ext) for ext in ALLOWED_EXTS) or f.lower() == 'dockerfile':
                     with open(filepath, 'r', encoding='utf-8-sig', errors='ignore') as code_file:
                         code = code_file.read()

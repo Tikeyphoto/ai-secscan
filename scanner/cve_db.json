@@ -53,5 +53,137 @@
             "owasp": "A06:2021",
             "pci": "6.2"
         }
+    },
+    {
+        "package": "lodash",
+        "vulnerable_below": "4.17.21",
+        "cve": "CVE-2021-23337",
+        "message": "Prototype Pollution and Command Injection в lodash.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "axios",
+        "vulnerable_below": "1.6.0",
+        "cve": "CVE-2023-45857",
+        "message": "Утечка CSRF-токена при межсайтовых запросах в axios.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "express",
+        "vulnerable_below": "4.19.2",
+        "cve": "CVE-2024-29041",
+        "message": "Open Redirect в express.js.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "minimist",
+        "vulnerable_below": "1.2.6",
+        "cve": "CVE-2021-44906",
+        "message": "Prototype Pollution в minimist.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "jsonwebtoken",
+        "vulnerable_below": "9.0.0",
+        "cve": "CVE-2022-23529",
+        "message": "Уязвимость проверки подписи JWT.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "log4j-core",
+        "vulnerable_below": "2.17.1",
+        "cve": "CVE-2021-44228",
+        "message": "Log4Shell: RCE через JNDI lookup в Log4j.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "spring-core",
+        "vulnerable_below": "5.3.18",
+        "cve": "CVE-2022-22965",
+        "message": "Spring4Shell: RCE через привязку данных.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "jackson-databind",
+        "vulnerable_below": "2.13.4",
+        "cve": "CVE-2022-42003",
+        "message": "Небезопасная десериализация Jackson.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "struts2-core",
+        "vulnerable_below": "6.3.0.1",
+        "cve": "CVE-2023-50164",
+        "message": "Path Traversal и RCE в Apache Struts.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "github.com/gin-gonic/gin",
+        "vulnerable_below": "1.9.0",
+        "cve": "CVE-2023-29401",
+        "message": "Небезопасное перенаправление в Gin.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "golang.org/x/crypto",
+        "vulnerable_below": "0.17.0",
+        "cve": "CVE-2023-48795",
+        "message": "Terrapin Attack: усечение SSH-рукопожатия.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
+    },
+    {
+        "package": "github.com/golang-jwt/jwt",
+        "vulnerable_below": "5.0.0",
+        "cve": "CVE-2020-26160",
+        "message": "Обход проверки токена в JWT для Go.",
+        "compliance": {
+            "cwe": "CWE-1104",
+            "owasp": "A06:2021",
+            "pci": "6.2"
+        }
     }
 ]
