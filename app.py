@@ -486,6 +486,67 @@ def scan():
     
     return jsonify({"status": "success", "filename": filename, "findings": findings, "scans_left": scans_left, "score": score, "grade": grade})
 
+@app.route('/api/scan_async', methods=['POST'])
+@limiter.limit("10 per minute")
+def scan_async():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    username = session['username']
+    allowed, scans_left = db_manager.check_and_increment_limit(username)
+    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан."}), 403
+
+    use_ai = (request.is_json and request.json.get('use_ai')) or (request.form.get('use_ai') == 'true')
+
+    import io, base64 as _b64, zipfile as _zip
+
+    if 'file' in request.files:
+        file = request.files['file']
+        filename = file.filename
+        data = file.read()
+        if not filename.lower().endswith('.zip'):
+            buf = io.BytesIO()
+            with _zip.ZipFile(buf, 'w', _zip.ZIP_DEFLATED) as z:
+                z.writestr(filename, data)
+            data = buf.getvalue()
+    elif request.is_json and 'code' in request.json:
+        code = request.json['code']
+        filename = request.json.get('filename', 'manual_input.py')
+        buf = io.BytesIO()
+        with _zip.ZipFile(buf, 'w', _zip.ZIP_DEFLATED) as z:
+            z.writestr(filename, code)
+        data = buf.getvalue()
+    else:
+        return jsonify({"error": "Не передан код или файл"}), 400
+
+    from tasks import scan_project_task
+    b64 = _b64.b64encode(data).decode()
+    task = scan_project_task.delay(username, b64, filename, use_ai)
+
+    return jsonify({
+        "status": "queued",
+        "task_id": task.id,
+        "filename": filename,
+        "scans_left": scans_left,
+    }), 202
+
+
+@app.route('/api/scan_async/status/<task_id>', methods=['GET'])
+def scan_async_status(task_id):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+
+    from celery.result import AsyncResult
+    from celery_app import celery_app as _ca
+    r = AsyncResult(task_id, app=_ca)
+
+    response = {"task_id": task_id, "state": r.state}
+    if r.state == 'PROGRESS' and r.info:
+        response['progress'] = r.info
+    elif r.state == 'SUCCESS':
+        response['result'] = r.result
+    elif r.state == 'FAILURE':
+        response['error'] = str(r.info)
+    return jsonify(response)
+
+
 @app.route('/api/scan_github', methods=['POST'])
 @limiter.limit("5 per minute")
 def scan_github():
