@@ -3,3 +3,6 @@
 *.bak_pg
 celerybeat-schedule*
 *.pid
+__pycache__/
+*.pyc
+*.pyo
