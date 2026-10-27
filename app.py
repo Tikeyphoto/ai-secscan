@@ -1034,6 +1034,61 @@ def org_page():
     return render_template('org.html', user=user)
 
 
+@app.route('/api/scan_diff', methods=['POST'])
+@limiter.limit("20 per minute")
+def api_scan_diff():
+    # Авторизация: либо Bearer, либо сессия
+    api_key = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
+    user = None
+    if api_key:
+        user = db_manager.get_user_by_api_key(api_key)
+    if not user and 'username' in session:
+        user = db_manager.get_user(session['username'])
+    if not user:
+        return jsonify({"error": "Не авторизован (нужен Bearer API-ключ или сессия)"}), 401
+
+    username = user['username']
+    data = request.get_json() or {}
+    diff_text = data.get('diff', '')
+    if not diff_text.strip():
+        return jsonify({"error": "Пустой diff"}), 400
+
+    from scanner.diff_parser import parse_unified_diff
+    added_lines = parse_unified_diff(diff_text)
+    if not added_lines:
+        return jsonify({"status": "success", "findings": [], "summary": {"total_issues": 0}, "message": "Нет добавленных строк"})
+
+    user_baselines = db_manager.get_user_baselines(username)
+    custom_rules = db_manager.get_custom_rules(username)
+    findings = []
+
+    for item in added_lines:
+        try:
+            file_findings = scanner.scan_code(item['code'], item['file'], user_baselines, custom_rules)
+            for f in file_findings:
+                if "error" not in f:
+                    f['file'] = item['file']
+                    f['line'] = item['line']
+                findings.append(f)
+        except Exception:
+            pass
+
+    score, grade = calculate_score(findings)
+    audit('scan_diff', details={'files': len(set(x['file'] for x in added_lines)), 'added_lines': len(added_lines), 'findings': len(findings)}, username_override=username)
+
+    return jsonify({
+        "status": "success",
+        "summary": {
+            "total_issues": len(findings),
+            "added_lines_scanned": len(added_lines),
+            "files": len(set(x['file'] for x in added_lines))
+        },
+        "score": score,
+        "grade": grade,
+        "findings": findings
+    })
+
+
 @app.route('/api/stats/trend')
 def api_stats_trend():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
@@ -1232,42 +1287,46 @@ def yandex_verify():
 @app.route('/api/generate_github_action')
 def generate_github_action():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
-    
-    yaml_template = """name: AI-SecScan
 
+    yaml_template = """name: AI-SecScan (Diff)
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-
 jobs:
   security-scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Zip Project
-        run: zip -r project.zip . -x "*.git*" -x "venv/*" -x "node_modules/*"
+      - name: Get Diff
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            git fetch origin ${{ github.base_ref }}
+            git diff origin/${{ github.base_ref }}...HEAD > diff.txt
+          else
+            git diff HEAD^ HEAD > diff.txt
+          fi
+          jq -Rs '{diff: .}' diff.txt > payload.json
 
       - name: Run AI-SecScan
         env:
           API_KEY: ${{ secrets.AISECSCAN_API_KEY }}
         run: |
-          RESPONSE=$(curl -s -X POST https://aisecscan.by/api/scan \
-            -H "Authorization: Bearer \$API_KEY" \
-            -F "file=@project.zip")
-          
-          echo "Scan Result: \$RESPONSE"
-          
-          CRITICAL=$(echo "\$RESPONSE" | jq '[.findings[] | select(.severity=="CRITICAL")] | length')
-          
-          if [ "\$CRITICAL" -gt 0 ]; then
-            echo "::error::Найдено критических уязвимостей: \$CRITICAL. Сборка остановлена."
+          RESPONSE=$(curl -s -X POST https://aisecscan.by/api/scan_diff \\
+            -H "Authorization: Bearer $API_KEY" \\
+            -H "Content-Type: application/json" \\
+            -d @payload.json)
+          echo "Scan Result: $RESPONSE"
+          CRITICAL=$(echo "$RESPONSE" | jq '[.findings[] | select(.severity=="CRITICAL" or .severity=="HIGH")] | length')
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Найдено критических/высоких уязвимостей: $CRITICAL."
             exit 1
           fi
-          
           echo "Проверка пройдена!"
 """
     return jsonify({"yaml": yaml_template})
