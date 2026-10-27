@@ -14,6 +14,7 @@ import io
 import base64
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, Response, stream_with_context
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flasgger import Swagger
@@ -27,6 +28,7 @@ import scan_core
 from translations import TRANSLATIONS
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 
 app.secret_key = 'super_secret_key_for_dev' 
@@ -44,7 +46,7 @@ try:
 except Exception as _e:
     _limiter_storage = "memory://"
     print(f"[limiter] Redis unavailable ({_e}), falling back to memory://", flush=True)
-limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"], storage_uri=_limiter_storage)
+limiter = Limiter(get_remote_address, app=app, default_limits=["10000 per day", "1000 per hour"], storage_uri=_limiter_storage)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RULES_FILE = os.path.join(BASE_DIR, "scanner", "rules.json")
