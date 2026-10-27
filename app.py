@@ -121,7 +121,18 @@ def profile():
     stats = db_manager.get_user_stats(session['username'])
     custom_rules = db_manager.get_custom_rules(session['username'])
     user_api_keys = db_manager.get_user_api_keys(session['username'])
-    return render_template('profile.html', user=user, history=history, stats=stats, custom_rules=custom_rules, user_api_keys=user_api_keys)
+    # SEC 05: Маскируем API-ключи перед передачей в HTML
+    masked_keys = []
+    for k in user_api_keys:
+        kd = dict(k)
+        raw = kd.get('api_key', '')
+        if raw and len(raw) > 12:
+            kd['api_key_masked'] = raw[:8] + '...' + raw[-4:]
+        else:
+            kd['api_key_masked'] = raw
+        masked_keys.append(kd)
+
+    return render_template('profile.html', user=user, history=history, stats=stats, custom_rules=custom_rules, user_api_keys=masked_keys)
 
 @app.route('/upgrade', methods=['POST'])
 def upgrade():
@@ -1093,6 +1104,16 @@ def api_scan_diff():
     })
 
 
+@app.route('/api/get_full_key/<int:key_id>')
+def api_get_full_key(key_id):
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    keys = db_manager.get_user_api_keys(session['username'])
+    for k in keys:
+        if k['id'] == key_id:
+            return jsonify({"api_key": k['api_key']})
+    return jsonify({"error": "Ключ не найден"}), 404
+
+
 @app.route('/api/stats/trend')
 def api_stats_trend():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
@@ -1325,7 +1346,7 @@ jobs:
             -H "Authorization: Bearer $API_KEY" \\
             -H "Content-Type: application/json" \\
             -d @payload.json)
-          echo "Scan Result: $RESPONSE"
+          echo "AI-SecScan: found $CRITICAL critical/high issues. See details below."
           CRITICAL=$(echo "$RESPONSE" | jq '[.findings[] | select(.severity=="CRITICAL" or .severity=="HIGH")] | length')
           if [ "$CRITICAL" -gt 0 ]; then
             echo "::error::Найдено критических/высоких уязвимостей: $CRITICAL."

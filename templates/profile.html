@@ -292,7 +292,8 @@
                         <div class="rule-item" style="background: var(--bg-base); border-color: var(--primary);">
                             <div class="rule-info">
                                 <span class="rule-title" style="color: var(--primary);"><i class="fa-solid fa-key"></i> {{ key['name'] }}</span>
-                                <span class="rule-pattern">{{ key['api_key'] }}</span>
+                                <span class="rule-pattern">{{ key['api_key_masked'] }}</span>
+                                <button class="btn" style="padding: 4px 8px; font-size: 11px; margin-left: 8px;" onclick="revealKey({{ key['id'] }})">Показать</button>
                             </div>
                             <button class="btn-delete" onclick="deleteKey({{ key['id'] }})"><i class="fa-solid fa-trash"></i></button>
                         </div>
@@ -776,6 +777,19 @@
                 hideLoading();
                 handleResponse(result);
             } catch (e) { hideLoading(); document.getElementById('results').innerHTML = `<div class="error-msg">${e.message}</div>`; }
+        }
+
+        async function revealKey(keyId) {
+            if (!confirm('Показать полный ключ? Убедитесь, что рядом нет посторонних.')) return;
+            try {
+                const res = await fetch('/api/get_full_key/' + keyId);
+                const data = await res.json();
+                if (data.api_key) {
+                    prompt('Скопируйте ключ (он больше не будет показан):', data.api_key);
+                } else {
+                    alert(data.error || 'Ошибка');
+                }
+            } catch (e) { alert('Ошибка: ' + e.message); }
         }
 
         function escapeHTML(str) {
