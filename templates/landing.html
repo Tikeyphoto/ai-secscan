@@ -128,6 +128,42 @@
         </div>
     </section>
 
+    <section id="security" class="features-section" style="background: rgba(16, 185, 129, 0.03); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+        <h2 class="section-title fade-in-up">{{ t('landing.sec.title') }}</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 40px; max-width: 700px; margin-left: auto; margin-right: auto;">{{ t('landing.sec.desc') }}</p>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: center; max-width: 1000px; margin: 0 auto;">
+            
+            <!-- Большая оценка A -->
+            <div style="background: #16a34a; color: #fff; border-radius: 20px; width: 140px; height: 140px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 10px 30px rgba(22, 163, 74, 0.3);">
+                <span style="font-size: 64px; font-weight: 900; line-height: 1;">A</span>
+                <span style="font-size: 14px; font-weight: 700; margin-top: 5px;">{{ t('landing.sec.a') }}</span>
+            </div>
+
+            <!-- Список проверок -->
+            <div style="flex: 1; min-width: 280px;">
+                <ul style="list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <li style="display: flex; align-items: center; gap: 10px; font-size: 15px;">
+                        <i class="fa-solid fa-check-circle" style="color: var(--success); font-size: 18px;"></i> {{ t('landing.sec.f1') }}
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 10px; font-size: 15px;">
+                        <i class="fa-solid fa-check-circle" style="color: var(--success); font-size: 18px;"></i> {{ t('landing.sec.f2') }}
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 10px; font-size: 15px;">
+                        <i class="fa-solid fa-check-circle" style="color: var(--success); font-size: 18px;"></i> {{ t('landing.sec.f3') }}
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 10px; font-size: 15px;">
+                        <i class="fa-solid fa-check-circle" style="color: var(--success); font-size: 18px;"></i> {{ t('landing.sec.f4') }}
+                    </li>
+                </ul>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 20px;">
+                    * {{ t('landing.sec.sub') }}
+                </p>
+            </div>
+
+        </div>
+    </section>
+
     <section id="pricing" class="pricing-section">
         <h2 class="section-title fade-in-up">{{ t('landing.price.title') }}</h2>
         
