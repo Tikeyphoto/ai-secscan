@@ -268,8 +268,10 @@
                         <div style="font-size: 40px; margin-bottom: 15px;">🛡️</div>
                         <h3 style="color: #10b981; margin-top: 0;">Конфиденциальность превыше всего</h3>
                         <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto; line-height: 1.6;">
-                            Мы не сохраняем ваш исходный код, названия файлов и результаты сканирований на наших серверах. 
-                            Все проверки выполняются в оперативной памяти и мгновенно удаляются после генерации отчёта.
+                            Мы <strong>не сохраняем ваш исходный код</strong>. Все проверки выполняются в оперативной памяти.<br>
+                            Сохраняются только результаты проверки (найденные фрагменты кода и их номера строк), чтобы вы могли повторно скачать отчёт.
+                            <br><br>
+                            <button class="btn" style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 8px 16px;" onclick="clearHistory()"><i class="fa-solid fa-trash"></i> Очистить историю сканирований</button>
                         </p>
                         <p style="color: var(--text-muted); font-size: 13px; margin-top: 15px;">
                             В статистике отображаются только общие (анонимные) счётчики активности.
