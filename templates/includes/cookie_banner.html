@@ -1,0 +1,94 @@
+<!-- Cookie Consent Banner -->
+<div id="cookie-banner" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-surface); border-top: 2px solid var(--primary); padding: 20px; z-index: 9999; box-shadow: 0 -10px 40px rgba(0,0,0,0.5);">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;">
+        
+        <div style="flex: 1; min-width: 300px;">
+            <h3 style="margin: 0 0 10px 0; color: var(--text-main); font-size: 18px;">
+                <i class="fa-solid fa-cookie-bite" style="color: var(--primary);"></i> {{ t('cookie.title') }}
+            </h3>
+            <p style="margin: 0; color: var(--text-muted); font-size: 14px; max-width: 700px;">
+                {{ t('cookie.desc') }}
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" onclick="toggleCookieSettings()" class="btn" style="background: transparent; border: 1px solid var(--border); color: var(--text-main);">{{ t('cookie.customize') }}</button>
+            <button type="button" onclick="acceptCookies('reject')" class="btn" style="background: transparent; border: 1px solid var(--danger); color: var(--danger);">{{ t('cookie.reject_all') }}</button>
+            <button type="button" onclick="acceptCookies('all')" class="btn" style="background: var(--primary);">{{ t('cookie.accept_all') }}</button>
+        </div>
+    </div>
+
+    <!-- Настройки (скрыты по умолчанию) -->
+    <div id="cookie-settings" style="display: none; max-width: 1200px; margin: 20px auto 0; padding-top: 20px; border-top: 1px solid var(--border);">
+        <div style="display: grid; gap: 15px;">
+            <!-- Необходимые -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-base); padding: 15px; border-radius: 8px;">
+                <div>
+                    <strong style="color: var(--text-main);">{{ t('cookie.necessary') }}</strong>
+                    <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 13px;">{{ t('cookie.necessary_desc') }}</p>
+                </div>
+                <input type="checkbox" checked disabled style="width: 20px; height: 20px;">
+            </div>
+            <!-- Аналитические -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-base); padding: 15px; border-radius: 8px;">
+                <div>
+                    <strong style="color: var(--text-main);">{{ t('cookie.analytics') }}</strong>
+                    <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 13px;">{{ t('cookie.analytics_desc') }}</p>
+                </div>
+                <input type="checkbox" id="cookie-analytics" style="width: 20px; height: 20px;">
+            </div>
+            <!-- Маркетинговые -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-base); padding: 15px; border-radius: 8px;">
+                <div>
+                    <strong style="color: var(--text-main);">{{ t('cookie.marketing') }}</strong>
+                    <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 13px;">{{ t('cookie.marketing_desc') }}</p>
+                </div>
+                <input type="checkbox" id="cookie-marketing" style="width: 20px; height: 20px;">
+            </div>
+        </div>
+        <div style="text-align: right; margin-top: 20px;">
+            <button type="button" onclick="saveCustomCookies()" class="btn" style="background: var(--success);">{{ t('cookie.save') }}</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const consent = localStorage.getItem('cookie_consent');
+        if (!consent) {
+            document.getElementById('cookie-banner').style.display = 'block';
+        }
+    });
+
+    function toggleCookieSettings() {
+        const el = document.getElementById('cookie-settings');
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function saveConsent(analytics, marketing) {
+        const data = { necessary: true, analytics: analytics, marketing: marketing, timestamp: new Date().toISOString() };
+        localStorage.setItem('cookie_consent', JSON.stringify(data));
+        document.getElementById('cookie-banner').style.display = 'none';
+        
+        // Отправляем на бэкенд (для аудита)
+        fetch('/api/cookie_consent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).catch(e => console.log('Cookie consent sync failed', e));
+    }
+
+    function acceptCookies(type) {
+        if (type === 'all') {
+            saveConsent(true, true);
+        } else {
+            saveConsent(false, false);
+        }
+    }
+
+    function saveCustomCookies() {
+        const analytics = document.getElementById('cookie-analytics').checked;
+        const marketing = document.getElementById('cookie-marketing').checked;
+        saveConsent(analytics, marketing);
+    }
+</script>

@@ -1,7 +1,7 @@
 ﻿TRANSLATIONS = {
     "ru": {
         "nav.features": "Возможности", "nav.pricing": "Тарифы", "nav.faq": "FAQ",
-        "nav.login": "Войти", "nav.register": "Начать бесплатно", "nav.logout": "Выйти",
+        "nav.login": "Войти", "nav.register": "Начать бесплатно", "nav.logout": "Выйти", "cookie.title": "Мы используем cookie", "cookie.desc": "Мы используем файлы cookie для анализа трафика и улучшения работы сайта. Вы можете выбрать, какие категории разрешить.", "cookie.accept_all": "Принять все", "cookie.reject_all": "Только необходимые", "cookie.customize": "Настроить", "cookie.save": "Сохранить выбор", "cookie.necessary": "Строго необходимые", "cookie.necessary_desc": "Нужны для работы сайта (сессия, безопасность).", "cookie.analytics": "Аналитические", "cookie.analytics_desc": "Помогают понять, как вы используете сайт.", "cookie.marketing": "Маркетинговые", "cookie.marketing_desc": "Используются для показа релевантной рекламы.",
         "landing.beta_btn": "Бесплатно в beta версии",
         "login.title": "Вход - AI-SecScan", "login.heading": "Вход", "login.username": "Логин", "login.password": "Пароль", "login.submit": "Войти", "login.no_account": "Нет аккаунта? Зарегистрироваться",
         "register.title": "Регистрация - AI-SecScan", "register.heading": "Регистрация", "register.username": "Придумайте логин", "register.email": "Ваш Email", "register.password": "Придумайте пароль", "register.invite": "Инвайт-код (если есть)", "register.submit": "Создать аккаунт", "register.have_account": "Уже есть аккаунт? Войти",
@@ -75,7 +75,7 @@
     },
     "en": {
         "nav.features": "Features", "nav.pricing": "Pricing", "nav.faq": "FAQ",
-        "nav.login": "Log in", "nav.register": "Start for free", "nav.logout": "Log out",
+        "nav.login": "Log in", "nav.register": "Start for free", "nav.logout": "Log out", "cookie.title": "We use cookies", "cookie.desc": "We use cookies to analyze traffic and improve the site. You can choose which categories to allow.", "cookie.accept_all": "Accept all", "cookie.reject_all": "Only necessary", "cookie.customize": "Customize", "cookie.save": "Save preferences", "cookie.necessary": "Strictly necessary", "cookie.necessary_desc": "Required for the site to work (session, security).", "cookie.analytics": "Analytics", "cookie.analytics_desc": "Help us understand how you use the site.", "cookie.marketing": "Marketing", "cookie.marketing_desc": "Used to show relevant ads.",
         "landing.beta_btn": "Free in beta",
         "login.title": "Login - AI-SecScan", "login.heading": "Login", "login.username": "Username", "login.password": "Password", "login.submit": "Log in", "login.no_account": "Don't have an account? Register",
         "register.title": "Register - AI-SecScan", "register.heading": "Register", "register.username": "Choose a username", "register.email": "Your Email", "register.password": "Choose a password", "register.invite": "Invite code (optional)", "register.submit": "Create account", "register.have_account": "Already have an account? Log in",
@@ -149,7 +149,7 @@
     },
     "zh": {
         "nav.features": "功能", "nav.pricing": "价格", "nav.faq": "常见问题",
-        "nav.login": "登录", "nav.register": "免费开始", "nav.logout": "退出",
+        "nav.login": "登录", "nav.register": "免费开始", "nav.logout": "退出", "cookie.title": "我们使用Cookie", "cookie.desc": "我们使用Cookie来分析流量并改进网站。您可以选择允许哪些类别。", "cookie.accept_all": "接受全部", "cookie.reject_all": "仅必要", "cookie.customize": "自定义", "cookie.save": "保存偏好", "cookie.necessary": "严格必要", "cookie.necessary_desc": "网站运行所必需（会话、安全）。", "cookie.analytics": "分析", "cookie.analytics_desc": "帮助我们了解您如何使用网站。", "cookie.marketing": "营销", "cookie.marketing_desc": "用于展示相关广告。",
         "landing.beta_btn": "测试版免费",
         "login.title": "登录 - AI-SecScan", "login.heading": "登录", "login.username": "用户名", "login.password": "密码", "login.submit": "登录", "login.no_account": "没有账号？立即注册",
         "register.title": "注册 - AI-SecScan", "register.heading": "注册", "register.username": "请输入用户名", "register.email": "您的邮箱", "register.password": "请输入密码", "register.invite": "邀请码（选填）", "register.submit": "创建账号", "register.have_account": "已有账号？去登录",

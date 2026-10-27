@@ -1145,6 +1145,18 @@ def api_clear_history():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/cookie_consent', methods=['POST'])
+def api_cookie_consent():
+    data = request.get_json() or {}
+    # Логируем в аудит, если пользователь авторизован
+    if 'username' in session:
+        audit('cookie_consent', details={'analytics': data.get('analytics'), 'marketing': data.get('marketing')})
+    else:
+        # Для анонимных пользователей пишем в лог
+        print(f"[COOKIE] Anonymous consent: analytics={data.get('analytics')}, marketing={data.get('marketing')}", flush=True)
+    return jsonify({"status": "success"}), 200
+
+
 @app.route('/api/stats/trend')
 def api_stats_trend():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
