@@ -104,6 +104,7 @@
 
     </script>
         <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <script src="/static/js/chart.min.js"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -255,7 +256,15 @@
                 </div>
 
                 
-                    <div class="card" style="margin-top: 20px; background: rgba(16, 185, 129, 0.05); border: 1px solid #10b981; border-radius: 12px; text-align: center; padding: 30px;">
+                    <div class="card" style="margin-top: 20px; padding: 20px;">
+                    <h3 style="margin-top: 0;"><i class="fa-solid fa-chart-line" style="color: var(--primary);"></i> {{ t('profile.trend_title') }}</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">{{ t('profile.trend_desc') }}</p>
+                    <div style="height: 250px; width: 100%;">
+                        <canvas id="trendChart" data-label="{{ t('profile.vulns_found') }}"></canvas>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px; background: rgba(16, 185, 129, 0.05); border: 1px solid #10b981; border-radius: 12px; text-align: center; padding: 30px;">
                         <div style="font-size: 40px; margin-bottom: 15px;">🛡️</div>
                         <h3 style="color: #10b981; margin-top: 0;">Конфиденциальность превыше всего</h3>
                         <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto; line-height: 1.6;">
@@ -566,6 +575,7 @@
         };
 
         function openTab(evt, tabName) {
+            if (tabName === 'tab-dashboard') { setTimeout(loadTrendChart, 100); }
             var i, tabcontent, tablinks;
             tabcontent = document.getElementsByClassName("tab-content");
             for (i = 0; i < tabcontent.length; i++) {
@@ -1037,6 +1047,50 @@ html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
                 btn.innerHTML = '<i class="fa-solid fa-check"></i> Скопировано!';
                 setTimeout(() => { btn.innerHTML = original; }, 2000);
             });
+        }
+
+    
+        let trendChartInst = null;
+        async function loadTrendChart() {
+            try {
+                const res = await fetch('/api/stats/trend');
+                const data = await res.json();
+                const labels = data.map(d => d.date);
+                const counts = data.map(d => d.count);
+                
+                const canvas = document.getElementById('trendChart');
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                if (trendChartInst) trendChartInst.destroy();
+                
+                trendChartInst = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: canvas.dataset.label || 'Issues',
+                            data: counts,
+                            borderColor: '#f38ba8',
+                            backgroundColor: 'rgba(243, 139, 168, 0.15)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true,
+                            pointBackgroundColor: '#f38ba8',
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0, color: '#a6adc8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            x: { ticks: { color: '#a6adc8' }, grid: { display: false } }
+                        }
+                    }
+                });
+            } catch (e) { console.error('Trend chart error:', e); }
         }
 
     </script>

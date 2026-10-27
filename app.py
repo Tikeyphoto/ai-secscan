@@ -1034,6 +1034,12 @@ def org_page():
     return render_template('org.html', user=user)
 
 
+@app.route('/api/stats/trend')
+def api_stats_trend():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    return jsonify(db_manager.get_user_trend(session['username']))
+
+
 @app.route('/api/org/create', methods=['POST'])
 def api_org_create():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401

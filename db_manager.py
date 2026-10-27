@@ -298,6 +298,25 @@ def get_user_stats(username):
         return {"total_scans": total_scans, "total_issues": total_issues or 0}
     finally: conn.close()
 
+def get_user_trend(username):
+    """Возвращает список {'date': 'YYYY-MM-DD', 'count': N} для графика."""
+    conn = get_db()
+    try:
+        rows = conn.execute("SELECT timestamp, findings_count FROM scans WHERE username = ? ORDER BY timestamp ASC", (username,)).fetchall()
+        trend = {}
+        for r in rows:
+            ts = r['timestamp']
+            # Postgres возвращает datetime, SQLite - строку
+            if hasattr(ts, 'strftime'):
+                d = ts.strftime('%Y-%m-%d')
+            else:
+                d = str(ts)[:10]
+            trend[d] = trend.get(d, 0) + (r['findings_count'] or 0)
+        return [{"date": k, "count": v} for k, v in trend.items()]
+    finally:
+        conn.close()
+
+
 def change_user_plan(username, new_plan):
     conn = get_db()
     try:
