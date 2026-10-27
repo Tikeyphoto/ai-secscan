@@ -133,7 +133,7 @@
                 <button class="nav-btn active" onclick="openTab(event, 'tab-scan')"><i class="fa-solid fa-magnifying-glass"></i> {{ t('profile.scanner') }}</button>
                 <button class="nav-btn" onclick="openTab(event, 'tab-dashboard')"><i class="fa-solid fa-chart-pie"></i> {{ t('profile.stats') }}</button>
                 <button class="nav-btn" onclick="openTab(event, 'tab-api')"><i class="fa-solid fa-key"></i> {{ t('profile.api') }}</button>
-                <button class="nav-btn" onclick="openTab(event, 'tab-webhooks')"><i class="fa-solid fa-link"></i> {{ t('profile.webhooks') }}</button>
+                <button class="nav-btn" onclick="openTab(event, 'tab-webhooks')"><i class="fa-solid fa-plug"></i> {{ t('profile.integrations') }}</button>
                 <button class="nav-btn" onclick="openTab(event, 'tab-rules')"><i class="fa-solid fa-sliders"></i> {{ t('profile.rules') }}</button>
                                 <button class="nav-btn" onclick="openTab(event, 'tab-billing')"><i class="fa-solid fa-credit-card"></i> {{ t('profile.billing') }}</button>
                 <button class="nav-btn" onclick="openTab(event, 'tab-settings')"><i class="fa-solid fa-gear"></i> {{ t('profile.settings') }}</button>
@@ -315,6 +315,13 @@
                 
                 
                 
+                
+
+<!-- 4. WEBHOOKS -->
+            <div id="tab-webhooks" class="tab-content">
+                <h2><i class="fa-solid fa-plug"></i> {{ t('profile.integrations') }}</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">Настройте автоматические проверки и уведомления для вашей команды.</p>
+                
                 <!-- GitHub Actions Integration -->
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border);">
                     <h3><i class="fa-brands fa-github"></i> Интеграция с GitHub Actions</h3>
@@ -334,9 +341,7 @@
                         <pre id="yamlContent" style="background: #000; color: #a6e3a1; padding: 15px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; overflow-x: auto; white-space: pre; border: 1px solid var(--border);"></pre>
                     </div>
                 </div>
-
-<!-- 4. WEBHOOKS -->
-            <div id="tab-webhooks" class="tab-content">
+            
                 <h2><i class="fa-solid fa-link"></i> {{ t('profile.webhook_title') }}</h2>
                 <p style="color: var(--text-muted);">{{ t('profile.webhook_desc') }}</p>
                 
@@ -533,15 +538,15 @@
                 </div>
 
                 <div class="card" style="margin-top: 40px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1)); border-color: var(--primary); text-align: center;">
-                    <h3 style="margin-top: 0;"><i class="fa-brands fa-telegram"></i> {{ t('profile.tg_title') }}</h3>
-                    <p style="color: var(--text-muted);">{{ t('profile.tg_desc') }}</p>
+                    <h3 style="margin-top: 0;"><i class="fa-solid fa-envelope-open-text"></i> {{ t('profile.contact_title') }}</h3>
+                    <p style="color: var(--text-muted);">{{ t('profile.contact_desc') }}</p>
                     <div style="display: flex; justify-content: center; margin-top: 20px;">
                         <a href="mailto:info@aisecscan.by" class="btn" style="background: #cba6f7; color: #11111b; font-size: 15px; padding: 12px 30px; font-weight: 700;">
                             <i class="fa-solid fa-envelope"></i> info@aisecscan.by
                         </a>
                     </div>
                     <p style="color: var(--text-muted); font-size: 13px; margin-top: 15px; text-align: center;">
-                        По вопросам сотрудничества или найденным багам — пишите на почту.
+                        {{ t('profile.contact_footer') }}
                     </p>
                 </div>
             </div>

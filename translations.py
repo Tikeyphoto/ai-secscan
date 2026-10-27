@@ -46,7 +46,7 @@
         "landing.feat.f3_title": "Поиск секретов", "landing.feat.f3_desc": "Мгновенное обнаружение ключей AWS, токенов Telegram и паролей в конфигурациях.",
         "landing.feat.f4_title": "Анализ зависимостей", "landing.feat.f4_desc": "Проверка библиотек (requirements.txt) на наличие известных уязвимостей (CVE).",
         
-        "profile.scanner": "Сканер", "profile.stats": "Статистика", "profile.api": "API Ключи", "profile.webhooks": "Webhooks", "profile.rules": "Мои правила", "profile.billing": "Подписка", "profile.settings": "Настройки", "profile.faq": "FAQ", "profile.upgrade": "Upgrade to Pro",
+        "profile.scanner": "Сканер", "profile.stats": "Статистика", "profile.api": "API Ключи", "profile.webhooks": "Webhooks", "profile.integrations": "集成", "profile.integrations": "Integrations", "profile.integrations": "Интеграции", "profile.rules": "Мои правила", "profile.billing": "Подписка", "profile.settings": "Настройки", "profile.faq": "FAQ", "profile.upgrade": "Upgrade to Pro",
         "profile.scan_title": "Сканирование кода", "profile.ai_toggle": "Включить глубокий AI-анализ (LLM)",
         "profile.drag_drop": "Перетащите файл сюда или нажмите для выбора", "profile.or_paste": "Или вставьте код вручную:",
         "profile.btn_scan": "Сканировать текст", "profile.results": "Результаты", "profile.issues_found": "Найдено проблем",
@@ -65,7 +65,7 @@
         "profile.settings_2fa": "Двухфакторная аутентификация (2FA)", "profile.settings_2fa_on": "2FA включена. Ваш аккаунт защищен.", "profile.settings_2fa_off": "Защитите аккаунт с помощью Google Authenticator.", "profile.settings_2fa_enable": "Включить 2FA", "profile.settings_2fa_disable": "Отключить 2FA",
         "profile.settings_2fa_scan": "Отсканируйте QR-код:", "profile.settings_2fa_alert": "QR-код сгенерирован!",
         "profile.billing_title": "Ваш тариф", "profile.billing_current": "Текущий план", "profile.billing_btn": "Выбрать тариф", "profile.billing_contact": "Связаться",
-        "profile.tg_news": "Новости разработки", "profile.tg_chat": "Чат / Поддержка", "profile.tg_title": "Наше сообщество в Telegram", "profile.tg_desc": "Присоединяйтесь! Узнавайте первыми о новых фичах.",
+        "profile.contact_title": "Связаться с нами", "profile.contact_desc": "Остались вопросы или нашли баг? Мы всегда на связи.", "profile.contact_footer": "По вопросам сотрудничества и найденным багам — пишите на почту.",
         "beta.badge": "Beta 0.9", "beta.feedback_title": "Оставить отзыв", "beta.feedback_desc": "Помогите нам сделать сервис лучше!", "beta.feedback_btn": "Отправить", "beta.feedback_placeholder": "Что улучшить?", "beta.feedback_success": "Спасибо за отзыв!", "beta.banner": "Вы используете бета-версию. Все PRO-функции временно бесплатны!",
         
         "js.scans_left": "Осталось сканирований", "js.btn_pdf": "PDF", "js.btn_json": "JSON", "js.btn_sarif": "SARIF", "js.btn_real": "Реальная", "js.btn_false": "Ложная", "js.btn_jira": "В Jira", "js.btn_ai_fix": "AI Autofix",
@@ -139,7 +139,7 @@
         "profile.settings_2fa": "Two-Factor Authentication (2FA)", "profile.settings_2fa_on": "2FA is enabled. Your account is protected.", "profile.settings_2fa_off": "Protect your account with Google Authenticator.", "profile.settings_2fa_enable": "Enable 2FA", "profile.settings_2fa_disable": "Disable 2FA",
         "profile.settings_2fa_scan": "Scan the QR code:", "profile.settings_2fa_alert": "QR code generated!",
         "profile.billing_title": "Your plan", "profile.billing_current": "Current plan", "profile.billing_btn": "Choose plan", "profile.billing_contact": "Contact us",
-        "profile.tg_news": "Dev News", "profile.tg_chat": "Chat / Support", "profile.tg_title": "Our Telegram Community", "profile.tg_desc": "Join us! Be the first to know about new features.",
+        "profile.contact_title": "Contact Us", "profile.contact_desc": "Have questions or found a bug? We are always in touch.", "profile.contact_footer": "For partnership inquiries and found bugs — write to us by email.",
         "beta.badge": "Beta 0.9", "beta.feedback_title": "Leave Feedback", "beta.feedback_desc": "Help us make the service better!", "beta.feedback_btn": "Submit", "beta.feedback_placeholder": "What to improve?", "beta.feedback_success": "Thank you!", "beta.banner": "You are using the beta version. All PRO features are temporarily free!",
         
         "js.scans_left": "Scans left", "js.btn_pdf": "PDF", "js.btn_json": "JSON", "js.btn_sarif": "SARIF", "js.btn_real": "Real", "js.btn_false": "False", "js.btn_jira": "To Jira", "js.btn_ai_fix": "AI Autofix",
@@ -213,7 +213,7 @@
         "profile.settings_2fa": "双因素认证（2FA）", "profile.settings_2fa_on": "2FA已启用。您的账户受到保护。", "profile.settings_2fa_off": "使用Google Authenticator保护您的账户。", "profile.settings_2fa_enable": "启用2FA", "profile.settings_2fa_disable": "禁用2FA",
         "profile.settings_2fa_scan": "扫描二维码：", "profile.settings_2fa_alert": "二维码已生成！",
         "profile.billing_title": "您的套餐", "profile.billing_current": "当前套餐", "profile.billing_btn": "选择套餐", "profile.billing_contact": "联系我们",
-        "profile.tg_news": "开发新闻", "profile.tg_chat": "聊天/支持", "profile.tg_title": "我们的Telegram社区", "profile.tg_desc": "加入我们！第一时间了解新功能。",
+        "profile.contact_title": "联系我们", "profile.contact_desc": "有疑问或发现漏洞？我们随时为您服务。", "profile.contact_footer": "关于合作事宜和发现的漏洞——请发邮件联系我们。",
         "beta.badge": "Beta 0.9", "beta.feedback_title": "留下反馈", "beta.feedback_desc": "帮助我们做得更好！", "beta.feedback_btn": "提交", "beta.feedback_placeholder": "需要改进什么？", "beta.feedback_success": "谢谢！", "beta.banner": "您正在使用测试版。所有PRO功能暂时免费！",
         
         "js.scans_left": "剩余扫描", "js.btn_pdf": "PDF", "js.btn_json": "JSON", "js.btn_sarif": "SARIF", "js.btn_real": "真实", "js.btn_false": "误报", "js.btn_jira": "到Jira", "js.btn_ai_fix": "AI自动修复",
