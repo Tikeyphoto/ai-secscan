@@ -14,9 +14,36 @@ class SecurityScanner:
         raw = f"{rule_id}|{code}"
         return hashlib.sha256(raw.encode('utf-8')).hexdigest()[:16]
 
+    def _detect_language(self, filename: str) -> str:
+        """Определяет язык по имени/расширению файла."""
+        name = os.path.basename(filename).lower()
+        ext = os.path.splitext(filename)[1].lower()
+        mapping = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.jsx': 'javascript',
+            '.tsx': 'typescript',
+            '.php': 'php',
+            '.java': 'java',
+            '.yml': 'yaml',
+            '.yaml': 'yaml',
+        }
+        if ext in mapping:
+            return mapping[ext]
+        if name in ('dockerfile', 'docker-compose.yml', 'docker-compose.yaml'):
+            return 'dockerfile'
+        return 'any'
+
+    def _rule_matches_lang(self, rule: dict, file_lang: str) -> bool:
+        """Правило подходит, если language='any' или совпадает с языком файла."""
+        rule_lang = rule.get("language", "any")
+        return rule_lang == "any" or rule_lang == file_lang
+
     def scan_code(self, code: str, filename: str, user_baselines: dict = None, custom_rules: list = None) -> list:
         findings = []
         ext = os.path.splitext(filename)[1].lower()
+        file_lang = self._detect_language(filename)
         
         # 1. AST-анализ (только для Python)
         if ext == '.py':
@@ -26,6 +53,8 @@ class SecurityScanner:
                     if isinstance(node, ast.Call):
                         func_name = self._get_func_name(node.func)
                         for rule in self.rules:
+                            if not self._rule_matches_lang(rule, file_lang):
+                                continue
                             if rule.get("type") == "function_call" and rule["pattern"] == func_name:
                                 self._add_finding(findings, rule, code, node.lineno, user_baselines)
                             elif rule.get("type") == "ast_call_check_sql" and rule["pattern"] == func_name:
@@ -39,6 +68,8 @@ class SecurityScanner:
         for line_num, line in enumerate(lines, 1):
             for rule in self.rules:
                 if rule.get("type") == "regex":
+                    if not self._rule_matches_lang(rule, file_lang):
+                        continue
                     flags = re.IGNORECASE if rule.get("ignore_case") else 0
                     if re.search(rule["pattern"], line, flags):
                         self._add_finding(findings, rule, code, line_num, user_baselines)

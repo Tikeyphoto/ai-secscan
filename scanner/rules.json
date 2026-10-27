@@ -9,7 +9,8 @@
             "cwe": "CWE-95",
             "owasp": "A03:2021",
             "pci": "6.5.1"
-        }
+        },
+        "language": "python"
     },
     {
         "id": "PY_EXEC",
@@ -21,7 +22,8 @@
             "cwe": "CWE-95",
             "owasp": "A03:2021",
             "pci": "6.5.1"
-        }
+        },
+        "language": "python"
     },
     {
         "id": "PY_OS_SYSTEM",
@@ -33,7 +35,8 @@
             "cwe": "CWE-95",
             "owasp": "A03:2021",
             "pci": "6.5.1"
-        }
+        },
+        "language": "python"
     },
     {
         "id": "SQL_RAW_FORMAT",
@@ -45,7 +48,8 @@
             "cwe": "CWE-89",
             "owasp": "A03:2021",
             "pci": "6.5.1"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "XSS_RENDER_TEMPLATE_STRING",
@@ -57,7 +61,8 @@
             "cwe": "CWE-79",
             "owasp": "A03:2021",
             "pci": "6.5.7"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "PY_HASH_MD5",
@@ -69,7 +74,8 @@
             "cwe": "CWE-327",
             "owasp": "A02:2021",
             "pci": "6.5.3"
-        }
+        },
+        "language": "python"
     },
     {
         "id": "PY_YAML_LOAD",
@@ -81,7 +87,8 @@
             "cwe": "CWE-710",
             "owasp": "A04:2021",
             "pci": "6.5.5"
-        }
+        },
+        "language": "python"
     },
     {
         "id": "JS_EVAL",
@@ -93,7 +100,8 @@
             "cwe": "CWE-95",
             "owasp": "A03:2021",
             "pci": "6.5.1"
-        }
+        },
+        "language": "javascript"
     },
     {
         "id": "JS_INNER_HTML",
@@ -105,7 +113,8 @@
             "cwe": "CWE-710",
             "owasp": "A04:2021",
             "pci": "6.5.5"
-        }
+        },
+        "language": "javascript"
     },
     {
         "id": "JS_DANGEROUSLY_SET_HTML",
@@ -117,7 +126,8 @@
             "cwe": "CWE-710",
             "owasp": "A04:2021",
             "pci": "6.5.5"
-        }
+        },
+        "language": "javascript"
     },
     {
         "id": "PHP_EVAL",
@@ -129,7 +139,8 @@
             "cwe": "CWE-95",
             "owasp": "A03:2021",
             "pci": "6.5.1"
-        }
+        },
+        "language": "php"
     },
     {
         "id": "SECRET_AWS_KEY",
@@ -141,7 +152,8 @@
             "cwe": "CWE-798",
             "owasp": "A02:2021",
             "pci": "6.5.3"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "SECRET_TELEGRAM_BOT",
@@ -153,7 +165,8 @@
             "cwe": "CWE-798",
             "owasp": "A02:2021",
             "pci": "6.5.3"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "SECRET_STRIPE_KEY",
@@ -165,7 +178,8 @@
             "cwe": "CWE-798",
             "owasp": "A02:2021",
             "pci": "6.5.3"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "SECRET_PRIVATE_KEY",
@@ -177,7 +191,8 @@
             "cwe": "CWE-798",
             "owasp": "A02:2021",
             "pci": "6.5.3"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "SECRET_GENERIC_PASSWORD",
@@ -190,7 +205,8 @@
             "cwe": "CWE-798",
             "owasp": "A02:2021",
             "pci": "6.5.3"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "DOCKER_ROOT_USER",
@@ -203,7 +219,8 @@
             "cwe": "CWE-250",
             "owasp": "A05:2021",
             "pci": "2.2.4"
-        }
+        },
+        "language": "dockerfile"
     },
     {
         "id": "DOCKER_LATEST_TAG",
@@ -216,7 +233,8 @@
             "cwe": "CWE-250",
             "owasp": "A05:2021",
             "pci": "2.2.4"
-        }
+        },
+        "language": "dockerfile"
     },
     {
         "id": "DOCKER_EXPOSE_SSH",
@@ -229,7 +247,8 @@
             "cwe": "CWE-250",
             "owasp": "A05:2021",
             "pci": "2.2.4"
-        }
+        },
+        "language": "dockerfile"
     },
     {
         "id": "DOCKER_ADD_REMOTE",
@@ -242,7 +261,8 @@
             "cwe": "CWE-250",
             "owasp": "A05:2021",
             "pci": "2.2.4"
-        }
+        },
+        "language": "dockerfile"
     },
     {
         "id": "DJANGO_DEBUG_TRUE",
@@ -255,7 +275,8 @@
             "cwe": "CWE-489",
             "owasp": "A05:2021",
             "pci": "6.5.5"
-        }
+        },
+        "language": "python"
     },
     {
         "id": "DJANGO_HARDCODED_SECRET",
@@ -267,7 +288,8 @@
             "cwe": "CWE-798",
             "owasp": "A02:2021",
             "pci": "6.5.3"
-        }
+        },
+        "language": "python"
     },
     {
         "id": "SQLALCHEMY_RAW_FSTRING",
@@ -280,7 +302,8 @@
             "cwe": "CWE-89",
             "owasp": "A03:2021",
             "pci": "6.5.1"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "JWT_VERIFY_FALSE",
@@ -293,7 +316,8 @@
             "cwe": "CWE-287",
             "owasp": "A07:2021",
             "pci": "6.5.10"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "JWT_ALGO_NONE",
@@ -306,7 +330,8 @@
             "cwe": "CWE-287",
             "owasp": "A07:2021",
             "pci": "6.5.10"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "CRYPTO_WEAK_CIPHER",
@@ -319,7 +344,8 @@
             "cwe": "CWE-327",
             "owasp": "A02:2021",
             "pci": "6.5.3"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "BANK_CARD_HARDCODED",
@@ -331,7 +357,8 @@
             "cwe": "CWE-710",
             "owasp": "A04:2021",
             "pci": "6.5.5"
-        }
+        },
+        "language": "any"
     },
     {
         "id": "IBAN_HARDCODED",
@@ -343,6 +370,7 @@
             "cwe": "CWE-710",
             "owasp": "A04:2021",
             "pci": "6.5.5"
-        }
+        },
+        "language": "any"
     }
 ]
