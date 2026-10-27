@@ -898,6 +898,20 @@ def api_change_plan():
     db_manager.change_user_plan(session['username'], new_plan)
     return jsonify({"status": "success", "message": "Тариф успешно изменен!"})
 
+@app.route('/api/report/sbom')
+def api_report_sbom():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    username = session['username']
+    sbom_filename, sbom_json = db_manager.get_last_sbom(username)
+    if not sbom_json:
+        return jsonify({"error": "SBOM не найден. Загрузите ZIP с requirements.txt (или package.json/go.mod/pom.xml)."}), 404
+    return Response(
+        sbom_json,
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment;filename={sbom_filename or "sbom.json"}.cdx.json'}
+    )
+
+
 @app.route('/api/report/<format>', methods=['GET'])
 def download_report(format):
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401

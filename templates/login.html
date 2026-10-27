@@ -48,8 +48,8 @@
             {% endwith %}
             {% if error %}<div class="error-msg">{{ error|safe }}</div>{% endif %}
             <form method="POST">
-                <input type="text" name="username" placeholder="{{ t('login.username') }}" required>
-                <input type="password" name="password" placeholder="{{ t('login.password') }}" required>
+                <input type="text" name="username" placeholder="{{ t('login.username') }}" aria-label="{{ t('login.username') }}" autocomplete="username" required>
+                <input type="password" name="password" placeholder="{{ t('login.password') }}" aria-label="{{ t('login.password') }}" autocomplete="current-password" required>
                 <button type="submit" class="btn" style="width: 100%; justify-content: center;">{{ t('login.submit') }}</button>
             </form>
             <a href="/register" class="auth-link">{{ t('login.no_account') }}</a>

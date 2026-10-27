@@ -41,9 +41,9 @@
             <h2><i class="fa-solid fa-user-plus"></i> {{ t('register.heading') }}</h2>
             {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
             <form method="POST">
-                <input type="text" name="username" placeholder="{{ t('register.username') }}" required>
-                <input type="email" name="email" placeholder="{{ t('register.email') }}" required>
-                <input type="password" name="password" placeholder="{{ t('register.password') }}" required>
+                <input type="text" name="username" placeholder="{{ t('register.username') }}" aria-label="{{ t('register.username') }}" autocomplete="username" required>
+                <input type="email" name="email" placeholder="{{ t('register.email') }}" aria-label="{{ t('register.email') }}" autocomplete="email" required>
+                <input type="password" name="password" placeholder="{{ t('register.password') }}" aria-label="{{ t('register.password') }}" autocomplete="new-password" required>
                 <input type="text" name="invite_code" placeholder="{{ t('register.invite') }}">
                 <button type="submit" class="btn" style="width: 100%; justify-content: center;">{{ t('register.submit') }}</button>
             </form>
