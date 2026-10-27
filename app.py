@@ -33,6 +33,10 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 app.secret_key = 'super_secret_key_for_dev' 
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 swagger = Swagger(app, template={'info': {'title': 'AI-SecScan API', 'description': 'API для сканирования кода', 'version': '1.0.0'}})
 
 import os as _os
