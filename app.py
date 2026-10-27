@@ -1114,6 +1114,23 @@ def api_get_full_key(key_id):
     return jsonify({"error": "Ключ не найден"}), 404
 
 
+@app.route('/api/clear_history', methods=['POST'])
+def api_clear_history():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    username = session['username']
+    try:
+        conn = db_manager.get_db()
+        conn.execute("DELETE FROM scans WHERE username = ?", (username,))
+        conn.execute("DELETE FROM scan_reports WHERE username = ?", (username,))
+        conn.execute("DELETE FROM sboms WHERE username = ?", (username,))
+        conn.commit()
+        conn.close()
+        audit('history_cleared', details={'deleted': True})
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/stats/trend')
 def api_stats_trend():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401

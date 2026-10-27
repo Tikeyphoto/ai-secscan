@@ -792,6 +792,20 @@
             } catch (e) { alert('Ошибка: ' + e.message); }
         }
 
+        async function clearHistory() {
+            if (!confirm('Вы уверены? Это удалит все сохранённые результаты сканирований и статистику.')) return;
+            try {
+                const res = await fetch('/api/clear_history', { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('История очищена!');
+                    location.reload();
+                } else {
+                    alert(data.error || 'Ошибка');
+                }
+            } catch (e) { alert('Ошибка: ' + e.message); }
+        }
+
         function escapeHTML(str) {
             if (!str) return '';
             return String(str).replace(/[&<>'"]/g, tag => ({
