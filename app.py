@@ -209,17 +209,77 @@ def _get_sendpulse_token():
     return token
 
 
-def send_email_via_sendpulse(to_email, subject, body_text):
-    """Отправляет письмо через SendPulse HTTP API (порт 443)."""
+def build_beautiful_email(title, content_html, button_text=None, button_url=None):
+    """Генерирует красивый HTML-шаблон письма в стиле сайта."""
+    button_block = ""
+    if button_text and button_url:
+        button_block = f"""
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{button_url}" style="background-color: #6366f1; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                {button_text}
+            </a>
+        </div>
+        """
+        
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #0f0f13; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0f0f13; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #1e1e24; border-radius: 12px; border: 1px solid #334155; overflow: hidden;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="padding: 30px; text-align: center; border-bottom: 1px solid #334155;">
+                                <h1 style="color: #6366f1; margin: 0; font-size: 24px;">🛡️ AI-SecScan</h1>
+                            </td>
+                        </tr>
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 40px 30px; color: #e2e8f0; font-size: 16px; line-height: 1.6;">
+                                <h2 style="color: #ffffff; margin-top: 0; font-size: 20px;">{title}</h2>
+                                {content_html}
+                                {button_block}
+                            </td>
+                        </tr>
+                        <!-- Footer -->
+                        <tr>
+                            <td style="padding: 20px; background-color: #11111b; text-align: center; font-size: 12px; color: #64748b;">
+                                <p style="margin: 0 0 10px 0;">© 2026 AI-SecScan. Все права защищены.</p>
+                                <p style="margin: 0;">
+                                    <a href="https://aisecscan.by" style="color: #6366f1; text-decoration: none;">aisecscan.by</a> | 
+                                    <a href="mailto:info@aisecscan.by" style="color: #6366f1; text-decoration: none;">info@aisecscan.by</a>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    return html
+
+
+def send_email_via_sendpulse(to_email, subject, body_text, body_html=None):
+    """Отправляет письмо через SendPulse HTTP API (порт 443). Поддерживает HTML."""
     token = _get_sendpulse_token()
-    payload = {
-        "email": {
-            "subject": subject,
-            "from": {"name": "AI-SecScan", "email": "no-reply@aisecscan.by"},
-            "to": [{"name": "", "email": to_email}],
-            "text": body_text,
-        }
+    email_data = {
+        "subject": subject,
+        "from": {"name": "AI-SecScan", "email": "no-reply@aisecscan.by"},
+        "to": [{"name": "", "email": to_email}],
+        "text": body_text,
     }
+    if body_html:
+        import base64 as _b64
+        email_data["html"] = _b64.b64encode(body_html.encode("utf-8")).decode("ascii")
+        
+    payload = {"email": email_data}
     resp = requests.post(
         "https://api.sendpulse.com/smtp/emails",
         headers={
@@ -234,13 +294,13 @@ def send_email_via_sendpulse(to_email, subject, body_text):
     return resp.json()
 
 
-def send_email_async(to_email, subject, body_text):
+def send_email_async(to_email, subject, body_text, body_html=None):
     """Асинхронная отправка: сначала SendPulse API, при ошибке — SMTP fallback."""
     def _send():
         # 1) SendPulse HTTP API
         if SENDPULSE_CLIENT_ID and SENDPULSE_CLIENT_SECRET:
             try:
-                send_email_via_sendpulse(to_email, subject, body_text)
+                send_email_via_sendpulse(to_email, subject, body_text, body_html)
                 print(f"[EMAIL SUCCESS] SendPulse API -> {to_email}", flush=True)
                 return
             except Exception as e:
@@ -313,10 +373,45 @@ def register():
             # - Пригласившему: +3 кредита
             db_manager.add_credits(username, 3, 'welcome_bonus')
             
+            # Welcome email новому пользователю
+            try:
+                credits_now = db_manager.get_user(username)['credits']
+                welcome_html = f"""
+                <p>Здравствуйте, <strong>{username}</strong>!</p>
+                <p>Добро пожаловать в AI-SecScan — статический анализатор кода с локальной AI-моделью.</p>
+                <p>Мы начислили вам <strong>{credits_now} приветственных кредитов</strong> на сканирования. Каждый скан списывает 1 кредит. Когда кредиты закончатся — вы сможете докупить пакет.</p>
+                <p style="margin-top: 30px;"><strong>С чего начать:</strong></p>
+                <ul style="color: #a6adc8; padding-left: 20px;">
+                    <li>Загрузите ZIP-архив проекта или вставьте код на странице «Сканер».</li>
+                    <li>Получите отчёт с оценкой безопасности (A-F) и AI-фиксами.</li>
+                    <li>Пригласите коллег через вкладку «Партнерам» — за каждого друга вы получите +3 кредита.</li>
+                </ul>
+                """
+                welcome_body = f"Здравствуйте, {username}!\n\nДобро пожаловать в AI-SecScan.\nВам начислено {credits_now} кредитов."
+                send_email_async(email, "Добро пожаловать в AI-SecScan", welcome_body, body_html=build_beautiful_email("Добро пожаловать!", welcome_html, "Перейти в личный кабинет", f"{DOMAIN_URL}/profile"))
+            except Exception as e:
+                print(f"[WELCOME EMAIL] failed: {e}", flush=True)
             if referrer_username:
                 db_manager.add_credits(username, 3, f'referral_extra_bonus')
                 db_manager.add_credits(referrer_username, 3, f'referral_bonus_for_{username}')
                 audit('referral_registration', target=username, username_override=referrer_username, details={'invited_bonus': 6, 'referrer_bonus': 3})
+
+                # Email пригласившему: "Ваш друг зарегистрировался"
+                try:
+                    referrer_user = db_manager.get_user(referrer_username)
+                    if referrer_user and referrer_user['email']:
+                        ref_body = (
+                            f"Здравствуйте, {referrer_username}!\n\n"
+                            f"Отличные новости: по вашей реферальной ссылке зарегистрировался новый пользователь — {username}.\n\n"
+                            f"Вам начислено +3 кредита за приглашение.\n"
+                            f"Текущий баланс: {db_manager.get_user(referrer_username)['credits']} кредитов.\n\n"
+                            f"Продолжайте приглашать — за каждую покупку вашего реферала вы получаете ещё 10% от суммы в кредитах.\n\n"
+                            f"Ваша реферальная ссылка: {DOMAIN_URL}/profile (вкладка «Партнерам»)\n\n"
+                            f"--\nКоманда AI-SecScan\nhttps://aisecscan.by"
+                        )
+                        send_email_async(referrer_user['email'], f"AI-SecScan: {username} зарегистрировался по вашей ссылке", ref_body)
+                except Exception as e:
+                    print(f"[REFERRAL EMAIL] failed: {e}", flush=True)
 
             if invite_code:
                 db_manager.use_invite(invite_code, username)
@@ -329,6 +424,12 @@ def register():
                     print(f"[REGISTER] org auto-join failed: {e}", flush=True)
             verify_link = f"{DOMAIN_URL}/verify/{username}"
             audit('register', target=username, username_override=username, details={'email': email, 'plan': plan})
+            verify_html = f"""
+            <p>Здравствуйте, <strong>{username}</strong>!</p>
+            <p>Спасибо за регистрацию в AI-SecScan.</p>
+            <p>Для подтверждения аккаунта и активации приветственных кредитов, пожалуйста, нажмите на кнопку ниже:</p>
+            <p style="color: #a6adc8; font-size: 14px; margin-top: 20px;">Если вы не регистрировались — просто проигнорируйте это письмо.</p>
+            """
             email_body = (
                 f"Здравствуйте, {username}!\n\n"
                 f"Спасибо за регистрацию в AI-SecScan.\n\n"
@@ -338,7 +439,7 @@ def register():
                 f"--\nКоманда AI-SecScan\nhttps://aisecscan.by"
             )
             try:
-                send_email_async(email, "AI-SecScan: Подтвердите ваш email", email_body)
+                send_email_async(email, "AI-SecScan: Подтвердите ваш email", email_body, body_html=build_beautiful_email("Подтверждение Email", verify_html, "Подтвердить Email", verify_link))
             except Exception as e:
                 print(f"[REGISTER] send_email failed: {e}", flush=True)
             flash("Аккаунт успешно создан! Мы отправили ссылку для подтверждения на email. Проверьте почту (и папку Спам).")
@@ -362,6 +463,11 @@ def resend_verification():
     if user['is_verified']:
         return render_template('login.html', error="Этот email уже подтверждён. Можете войти.")
     verify_link = f"{DOMAIN_URL}/verify/{username}"
+    verify_html = f"""
+    <p>Здравствуйте, <strong>{username}</strong>!</p>
+    <p>Вы запросили повторную отправку ссылки для подтверждения email в AI-SecScan.</p>
+    <p>Нажмите на кнопку ниже, чтобы подтвердить аккаунт:</p>
+    """
     email_body = (
         f"Здравствуйте, {username}!\n\n"
         f"Вы запросили повторную отправку ссылки для подтверждения email в AI-SecScan.\n\n"
@@ -369,7 +475,7 @@ def resend_verification():
         f"--\nКоманда AI-SecScan\nhttps://aisecscan.by"
     )
     try:
-        send_email_async(user['email'], "AI-SecScan: Повторное подтверждение email", email_body)
+        send_email_async(user['email'], "AI-SecScan: Повторное подтверждение email", email_body, body_html=build_beautiful_email("Подтверждение Email", verify_html, "Подтвердить Email", verify_link))
     except Exception as e:
         print(f"[RESEND] failed: {e}", flush=True)
         return render_template('login.html', error=f"Не удалось отправить письмо: {e}")
@@ -585,6 +691,25 @@ def scan():
     if not (len(findings) == 1 and "error" in findings[0]): 
         db_manager.save_scan_report(username, filename, findings)
     
+    # Email о низком балансе (если у Free-юзера остался 1 кредит)
+    try:
+        user_after = db_manager.get_user(username)
+        if user_after and user_after['plan'] == 'free' and user_after['credits'] == 1:
+            low_body = (
+                f"Здравствуйте, {username}!\n\n"
+                f"У вас остался 1 кредит на сканирование.\n\n"
+                f"Не хотите ли докупить пакет, чтобы продолжить проверку кода без ограничений?\n\n"
+                f"Доступные пакеты:\n"
+                f"- Старт: 10 сканирований за 5 BYN\n"
+                f"- Бизнес: 50 сканирований за 20 BYN\n"
+                f"- Про: 200 сканирований за 60 BYN\n\n"
+                f"Купить: {DOMAIN_URL}/profile (вкладка «Сканер» → кнопка «Докупить»)\n\n"
+                f"--\nКоманда AI-SecScan\nhttps://aisecscan.by"
+            )
+            send_email_async(user_after['email'], "AI-SecScan: У вас остался 1 кредит", low_body)
+    except Exception as e:
+        print(f"[LOW BALANCE EMAIL] failed: {e}", flush=True)
+
     return jsonify({"status": "success", "filename": filename, "findings": findings, "scans_left": scans_left, "score": score, "grade": grade})
 
 @app.route('/api/scan_async', methods=['POST'])
@@ -1207,6 +1332,25 @@ def api_buy_credits():
     price = packages[package]['price']
     
     if db_manager.add_credits(username, amount, f'mock_purchase_{package}'):
+        # Email подтверждения покупки
+        try:
+            user_for_email = db_manager.get_user(username)
+            if user_for_email and user_for_email['email']:
+                new_balance = user_for_email['credits']
+                purchase_body = (
+                    f"Здравствуйте, {username}!\n\n"
+                    f"Спасибо за покупку пакета кредитов.\n\n"
+                    f"Пакет: {package}\n"
+                    f"Начислено: +{amount} кредитов\n"
+                    f"Текущий баланс: {new_balance} кредитов\n\n"
+                    f"Вы можете использовать кредиты для сканирования кода. Каждый скан списывает 1 кредит.\n\n"
+                    f"Приятной работы!\n\n"
+                    f"--\nКоманда AI-SecScan\nhttps://aisecscan.by"
+                )
+                send_email_async(user_for_email['email'], f"AI-SecScan: Покупка кредитов ({amount} шт.)", purchase_body)
+        except Exception as e:
+            print(f"[PURCHASE EMAIL] failed: {e}", flush=True)
+
         # Бонус рефереру (10% от купленного пакета, минимум 1)
         user = db_manager.get_user(username)
         if user and user['referred_by']:
