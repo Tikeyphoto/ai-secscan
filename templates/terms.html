@@ -1,59 +1,61 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
-    <title>Публичный договор-оферта - AI-SecScan</title>
+    <title>{{ t('terms.title') }} - AI-SecScan</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: var(--bg-base); color: var(--text-main); line-height: 1.8; padding: 40px 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--bg-surface); padding: 40px; border-radius: 12px; border: 1px solid var(--border); }
+        h1 { color: var(--primary); margin-bottom: 30px; font-size: 28px; }
+        h2 { color: var(--text-main); margin-top: 30px; margin-bottom: 15px; font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        p { color: var(--text-muted); margin-bottom: 15px; font-size: 15px; text-align: justify; }
+        .back-btn { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; font-weight: 500; }
+        .back-btn:hover { text-decoration: underline; }
+        .footer { margin-top: 40px; font-size: 13px; color: var(--text-muted); text-align: center; border-top: 1px solid var(--border); padding-top: 20px; }
+        .last-updated { font-size: 12px; color: var(--text-muted); text-align: right; margin-bottom: 20px; }
+    </style>
 </head>
-<body style="overflow: auto;">
-    <nav class="navbar">
-        <div class="logo"><i class="fa-solid fa-shield-halved"></i> AI-SecScan</div>
-        <div class="user-nav">
-            <a href="/profile" class="btn" style="background: transparent; border: 1px solid var(--primary); color: var(--primary);"><i class="fa-solid fa-arrow-left"></i> Назад в кабинет</a>
-        </div>
-    </nav>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← На главную / Back / 返回</a>
+        <h1>{{ t('terms.title') }}</h1>
+        <p class="last-updated">v2.0 · 2026</p>
 
-    <div class="container" style="max-width: 900px; margin-top: 40px; padding: 40px; background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border);">
-        <h1 style="color: var(--primary); margin-top: 0;">Публичный договор-оферта</h1>
-        <p style="color: var(--text-muted);">на предоставление права использования сервиса «AI-SecScan»</p>
-        
-        <div style="line-height: 1.8; color: var(--text-main); margin-top: 30px;">
-            <h3>1. Общие положения</h3>
-            <p>1.1. Настоящий документ является публичной офертой (далее — «Оферта») и определяет условия предоставления права использования программного обеспечения «AI-SecScan» (далее — «Сервис»).</p>
-            <p>1.2. Акцептом (принятием) настоящей Оферты является регистрация учетной записи в Сервисе или оплата выбранного тарифа. С момента совершения данных действий Пользователь считается ознакомленным и согласным с условиями Оферты.</p>
+        <h2>{{ t('terms.intro_title') }}</h2>
+        <p>{{ t('terms.intro_desc') }}</p>
 
-            <h3>2. Предмет договора</h3>
-            <p>2.1. Исполнитель предоставляет Пользователю простую (неисключительную) лицензию на использование функционала Сервиса в объеме, предусмотренном выбранным тарифным планом (Free, Pro, Startup, Team, Enterprise).</p>
-            <p>2.2. Сервис предназначен для статического анализа исходного кода, поиска уязвимостей, генерации отчетов и использования AI-модулей для аудита безопасности.</p>
+        <h2>{{ t('terms.services_title') }}</h2>
+        <p>{{ t('terms.services_desc') }}</p>
 
-            <h3>3. Права и обязанности сторон</h3>
-            <p>3.1. Исполнитель обязуется обеспечивать работоспособность Сервиса, устранять технические ошибки и предоставлять доступ к обновлениям базы знаний (правил).</p>
-            <p>3.2. Пользователь обязуется не использовать Сервис для противоправных действий, не пытаться нарушить работоспособность инфраструктуры Сервиса (DDoS-атаки, подбор паролей) и не передавать свои API-ключи третьим лицам.</p>
+        <h2>{{ t('terms.accept_title') }}</h2>
+        <p>{{ t('terms.accept_desc') }}</p>
 
-            <h3>4. Тарифы и порядок расчетов</h3>
-            <p>4.1. Стоимость доступа к Сервису определяется действующими тарифами, опубликованными на сайте. Оплата производится на условиях предоплаты.</p>
-            <p>4.2. В случае изменения тарифов, новые цены вступают в силу с момента их публикации и не распространяются на уже оплаченные периоды.</p>
+        <h2>{{ t('terms.credits_title') }}</h2>
+        <p>{{ t('terms.credits_desc') }}</p>
 
-            <h3>5. Конфиденциальность и обработка данных</h3>
-            <p>5.1. <b>Код Пользователя не сохраняется на серверах Исполнителя.</b> Анализ производится в оперативной памяти, а результаты удаляются после генерации отчета.</p>
-            <p>5.2. Для клиентов тарифа Enterprise предусмотрена возможность полного развертывания (On-Premise), при котором данные не покидают инфраструктуру Пользователя.</p>
-            <p>5.3. Исполнитель собирает минимальные технические данные (логи сканирований, статистику использования), необходимые для работы Сервиса и обучения AI-моделей в обезличенном виде.</p>
+        <h2>{{ t('terms.payment_title') }}</h2>
+        <p>{{ t('terms.payment_desc') }}</p>
 
-            <h3>6. Ответственность сторон</h3>
-            <p>6.1. Сервис предоставляется на условиях «как есть» (As Is). Исполнитель не гарантирует обнаружение 100% уязвимостей в коде Пользователя.</p>
-            <p>6.2. Исполнитель не несет ответственности за любые убытки (включая упущенную выгоду), возникшие в результате использования или невозможности использования Сервиса.</p>
+        <h2>{{ t('terms.privacy_title') }}</h2>
+        <p>{{ t('terms.privacy_desc') }}</p>
 
-            <h3>7. Заключительные положения</h3>
-            <p>7.1. Исполнитель оставляет за собой право вносить изменения в настоящую Оферту. Новая редакция вступает в силу с момента ее публикации на данной странице.</p>
-            <p>7.2. Пользователь обязуется самостоятельно отслеживать изменения Оферты.</p>
-            
-            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 14px; color: var(--text-muted);">
-                <p>Дата последнего обновления: 25 октября 2026 г.</p>
-                <p>Если у вас есть вопросы по условиям, свяжитесь с нами: <a href="mailto:info@aisecscan.by" style="color: var(--primary);">info@aisecscan.by</a></p>
-            </div>
+        <h2>{{ t('terms.liability_title') }}</h2>
+        <p>{{ t('terms.liability_desc') }}</p>
+
+        <h2>{{ t('terms.force_majeure_title') }}</h2>
+        <p>{{ t('terms.force_majeure_desc') }}</p>
+
+        <h2>{{ t('terms.disputes_title') }}</h2>
+        <p>{{ t('terms.disputes_desc') }}</p>
+
+        <h2>{{ t('terms.contacts_title') }}</h2>
+        <p>{{ t('terms.contacts_desc') }}</p>
+
+        <div class="footer">
+            © 2026 AI-SecScan. <a href="mailto:info@aisecscan.by" style="color: var(--primary);">info@aisecscan.by</a>
         </div>
     </div>
-    {% include 'includes/cookie_banner.html' %}
 </body>
 </html>
