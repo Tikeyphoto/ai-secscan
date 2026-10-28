@@ -195,6 +195,14 @@ def verify_user_email(username):
         conn.commit()
     finally: conn.close()
 
+def get_user_by_email(email):
+    conn = get_db()
+    try:
+        return conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    finally:
+        conn.close()
+
+
 def get_user(username):
     conn = get_db()
     try: return conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()

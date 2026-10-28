@@ -271,10 +271,28 @@ def send_email_async(to_email, subject, body_text):
 def register():
     if request.method == 'POST':
         username = request.form['username']
-        email = request.form['email']
+        email = request.form['email'].strip().lower()
         password = request.form['password']
+        confirm_password = request.form.get('confirm_password', '')
         invite_code = request.form.get('invite_code', '').strip()
+
+        # 1. Проверка на совпадение паролей
+        if password != confirm_password:
+            return render_template('register.html', error="Пароли не совпадают.")
+
+        # 2. Проверка сложности пароля (мин 8 символов, буквы, цифры, спецсимвол)
+        import re
+        if not re.search(r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$", password):
+            return render_template('register.html', error="Пароль должен содержать: минимум 8 символов, хотя бы одну букву (A-Z, a-z), хотя бы одну цифру (0-9) и хотя бы один спецсимвол (@$!%*#?&).")
+
+        # 3. Проверка уникальности email
+        if db_manager.get_user_by_email(email):
+            return render_template('register.html', error="Пользователь с таким email уже зарегистрирован.")
         
+        # 4. Проверка уникальности username
+        if db_manager.get_user(username):
+            return render_template('register.html', error="Пользователь с таким логином уже существует. Выберите другой.")
+
         plan = 'free'
         if invite_code:
             code_data = db_manager.validate_invite(invite_code)
@@ -1200,6 +1218,25 @@ def api_buy_credits():
         return jsonify({"status": "success", "amount": amount, "message": f"Начислено {amount} сканов (тестовый режим)"})
     else:
         return jsonify({"error": "Ошибка начисления"}), 500
+
+
+@app.route('/api/check_username')
+def api_check_username():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({"available": False, "error": "Пустой логин"})
+    
+    # Минимум 3 символа
+    if len(username) < 3:
+        return jsonify({"available": False, "reason": "Минимум 3 символа"})
+    
+    # Только буквы, цифры, _ и -
+    import re
+    if not re.match(r'^[a-zA-Z0-9_\-]+$', username):
+        return jsonify({"available": False, "reason": "Только буквы, цифры, _ и -"})
+    
+    exists = db_manager.get_user(username) is not None
+    return jsonify({"available": not exists, "reason": "" if not exists else "Уже занят"})
 
 
 @app.route('/api/cookie_consent', methods=['POST'])

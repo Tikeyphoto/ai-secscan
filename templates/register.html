@@ -42,8 +42,12 @@
             {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
             <form method="POST">
                 <input type="text" name="username" placeholder="{{ t('register.username') }}" aria-label="{{ t('register.username') }}" autocomplete="username" required>
+                <div id="usernameStatus" style="font-size: 12px; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
                 <input type="email" name="email" placeholder="{{ t('register.email') }}" aria-label="{{ t('register.email') }}" autocomplete="email" required>
-                <input type="password" name="password" placeholder="{{ t('register.password') }}" aria-label="{{ t('register.password') }}" autocomplete="new-password" required>
+                <input type="password" name="password" id="passwordInput" placeholder="{{ t('register.password') }}" aria-label="{{ t('register.password') }}" autocomplete="new-password" required>
+                <div id="passwordStrength" style="font-size: 12px; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
+                <input type="password" name="confirm_password" placeholder="Подтвердите пароль" aria-label="Подтвердите пароль" autocomplete="new-password" required>
+                <div id="passwordMatch" style="font-size: 12px; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
                 <input type="text" name="invite_code" placeholder="{{ t('register.invite') }}">
                 <button type="submit" class="btn" style="width: 100%; justify-content: center;">{{ t('register.submit') }}</button>
             </form>
@@ -53,6 +57,40 @@
     <script>
         // Автозаполнение инвайт-кода из URL (?invite=INV-XXXX)
         document.addEventListener('DOMContentLoaded', function() {
+            // Проверка уникальности username в реальном времени
+            const usernameInput = document.querySelector('input[name="username"]');
+            const usernameStatus = document.getElementById('usernameStatus');
+            let usernameTimeout = null;
+
+            if (usernameInput && usernameStatus) {
+                usernameInput.addEventListener('input', function() {
+                    const val = this.value.trim();
+                    clearTimeout(usernameTimeout);
+                    
+                    if (val.length === 0) {
+                        usernameStatus.style.display = 'none';
+                        return;
+                    }
+                    
+                    usernameStatus.style.display = 'block';
+                    usernameStatus.innerHTML = '<span style="color: var(--text-muted);">Проверка...</span>';
+                    
+                    usernameTimeout = setTimeout(async () => {
+                        try {
+                            const res = await fetch('/api/check_username?username=' + encodeURIComponent(val));
+                            const data = await res.json();
+                            if (data.available) {
+                                usernameStatus.innerHTML = '<span style="color: var(--success);">✓ Логин свободен</span>';
+                            } else {
+                                usernameStatus.innerHTML = '<span style="color: var(--danger);">✗ ' + (data.reason || 'Недоступен') + '</span>';
+                            }
+                        } catch(e) {
+                            usernameStatus.innerHTML = '<span style="color: var(--text-muted);">Ошибка проверки</span>';
+                        }
+                    }, 500);
+                });
+            }
+
             const urlParams = new URLSearchParams(window.location.search);
             const inviteCode = urlParams.get('invite');
             if (inviteCode) {
@@ -88,5 +126,96 @@
         });
     </script>
     {% include 'includes/cookie_banner.html' %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const pwdInput = document.getElementById('passwordInput');
+            const strengthDiv = document.getElementById('passwordStrength');
+            const form = document.querySelector('form');
+
+            if (pwdInput) {
+                pwdInput.addEventListener('input', function() {
+                    const val = this.value;
+                    if (val.length === 0) {
+                        strengthDiv.style.display = 'none';
+                        return;
+                    }
+                    strengthDiv.style.display = 'block';
+                    
+                    // Проверяем требования
+                    const hasLetter = /[A-Za-z]/.test(val);
+                    const hasDigit = /[0-9]/.test(val);
+                    const hasSpecial = /[@$!%*#?&]/.test(val);
+                    const lengthOk = val.length >= 8;
+                    const charsLeft = Math.max(0, 8 - val.length);
+
+                    // Что не хватает
+                    let missing = [];
+                    if (!lengthOk) missing.push(`ещё ${charsLeft} ${charsLeft === 1 ? 'символ' : (charsLeft < 5 ? 'символа' : 'символов')}`);
+                    if (!hasLetter) missing.push('букву');
+                    if (!hasDigit) missing.push('цифру');
+                    if (!hasSpecial) missing.push('спецсимвол (@$!%*#?&)');
+
+                    // Считаем score (для цвета)
+                    let score = 0;
+                    if (lengthOk) score++;
+                    if (hasLetter) score++;
+                    if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+                    if (hasDigit) score++;
+                    if (hasSpecial) score++;
+
+                    let statusText = '';
+                    let color = '';
+                    if (score <= 2) { statusText = 'Слабый'; color = 'var(--danger)'; }
+                    else if (score <= 4) { statusText = 'Средний'; color = 'var(--warning)'; }
+                    else { statusText = 'Надежный'; color = 'var(--success)'; }
+
+                    // Формируем строку
+                    let msg = `<strong style="color: ${color};">${statusText}</strong> · ${val.length} / 8 символов`;
+                    if (missing.length > 0) {
+                        msg += `<br><span style="color: var(--text-muted);">Не хватает: ${missing.join(', ')}</span>`;
+                    } else {
+                        msg += `<br><span style="color: var(--success);">✓ Все требования выполнены</span>`;
+                    }
+
+                    strengthDiv.innerHTML = msg;
+                });
+
+                const confirmInput = document.querySelector('input[name="confirm_password"]');
+                const matchDiv = document.getElementById('passwordMatch');
+
+                function checkMatch() {
+                    if (!pwdInput.value || !confirmInput.value) {
+                        matchDiv.style.display = 'none';
+                        return;
+                    }
+                    matchDiv.style.display = 'block';
+                    if (pwdInput.value === confirmInput.value) {
+                        matchDiv.innerHTML = "✓ Пароли совпадают";
+                        matchDiv.style.color = "var(--success)";
+                    } else {
+                        matchDiv.innerHTML = "✗ Пароли не совпадают";
+                        matchDiv.style.color = "var(--danger)";
+                    }
+                }
+
+                if (pwdInput && confirmInput) {
+                    pwdInput.addEventListener('input', checkMatch);
+                    confirmInput.addEventListener('input', checkMatch);
+                }
+            }
+
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const pwd = document.querySelector('input[name="password"]').value;
+                    const confirm = document.querySelector('input[name="confirm_password"]').value;
+                    if (pwd !== confirm) {
+                        e.preventDefault();
+                        alert("Пароли не совпадают!");
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
