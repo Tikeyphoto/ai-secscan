@@ -291,7 +291,12 @@ def check_and_increment_limit(username):
         if not user: return False, 0
         today = date.today().isoformat()
         scans_today = user['scans_today'] or 0
-        if user['last_scan_date'] != today: scans_today = 0
+        # last_scan_date может быть datetime.date (Postgres) или строкой (SQLite)
+        last_date = user['last_scan_date']
+        if hasattr(last_date, 'isoformat'):
+            last_date = last_date.isoformat()
+        if str(last_date) != today:
+            scans_today = 0
         
         if user['plan'] != 'free':
             return True, 9999

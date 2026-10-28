@@ -843,8 +843,20 @@
         function handleError(status, data) {
             hideLoading();
             const resultsDiv = document.getElementById('results');
-            let errorMsg = data.error || `HTTP ${status}`;
-            resultsDiv.innerHTML = `<div class="error-msg" style="font-size: 16px; padding: 20px;">⚠️ ${errorMsg}</div>`;
+            
+            // Если исчерпан лимит — сразу показываем всплывающее окно
+            if (data && data.limit_exhausted) {
+                document.getElementById('limit-modal').style.display = 'flex';
+                return;
+            }
+            
+            // Обычная ошибка
+            let errorMsg = (data && data.error) || `HTTP ${status}`;
+            resultsDiv.innerHTML = `<div class="error-msg" style="font-size: 16px; padding: 20px;">⚠️ ${escapeHTML(errorMsg)}</div>`;
+        }
+        
+        function closeLimitModal() {
+            document.getElementById('limit-modal').style.display = 'none';
         }
 
         async function scanGitHub() {
@@ -1353,6 +1365,23 @@ html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
             <button type="button" class="btn" onclick="declineTerms()" style="background: transparent; border: 1px solid var(--border); color: var(--text-main);">{{ t('terms.decline') }}</button>
             <button type="button" class="btn" onclick="acceptTerms()" style="background: var(--success);">{{ t('terms.accept') }}</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Модалка "Лимит исчерпан" -->
+<div id="limit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10003; justify-content: center; align-items: center; padding: 20px;">
+    <div class="card" style="max-width: 500px; width: 90%; padding: 35px; text-align: center; border: 2px solid var(--warning);">
+        <div style="font-size: 60px; margin-bottom: 15px;">⚡</div>
+        <h2 style="margin: 0 0 15px 0; color: var(--warning); font-size: 24px;">Лимит сканирований исчерпан</h2>
+        <p style="color: var(--text-muted); margin-bottom: 25px; line-height: 1.6;">
+            Вы использовали все 3 бесплатных скана на сегодня.<br>
+            Купите пакет кредитов, чтобы продолжить проверку кода без ограничений.
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button type="button" class="btn" onclick="closeLimitModal()" style="background: transparent; border: 1px solid var(--border); color: var(--text-main);">Позже</button>
+            <button type="button" class="btn" onclick="closeLimitModal(); openCreditsModal();" style="background: var(--success); padding: 10px 25px;"><i class="fa-solid fa-cart-plus"></i> Купить кредиты</button>
         </div>
     </div>
 </div>

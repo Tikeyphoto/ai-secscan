@@ -503,7 +503,7 @@ def scan():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
     username = session['username']
     allowed, scans_left = db_manager.check_and_increment_limit(username)
-    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан."}), 403
+    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан.", "limit_exhausted": True, "hint": "Купите кредиты, чтобы продолжить сканирование без ограничений."}), 403
 
     allowed_exts = ['.py', '.js', '.php', '.java', '.ts', '.env', '.yml', '.yaml', '.json', '.txt', '.cfg', '.ini', '.xml']
     filename = "manual_input.py"
@@ -593,7 +593,7 @@ def scan_async():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
     username = session['username']
     allowed, scans_left = db_manager.check_and_increment_limit(username)
-    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан."}), 403
+    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан.", "limit_exhausted": True, "hint": "Купите кредиты, чтобы продолжить сканирование без ограничений."}), 403
 
     use_ai = (request.is_json and request.json.get('use_ai')) or (request.form.get('use_ai') == 'true')
 
@@ -654,7 +654,7 @@ def scan_github():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
     username = session['username']
     allowed, scans_left = db_manager.check_and_increment_limit(username)
-    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан."}), 403
+    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан.", "limit_exhausted": True, "hint": "Купите кредиты, чтобы продолжить сканирование без ограничений."}), 403
 
     data = request.get_json()
     repo_url = data.get('repo_url', '').strip()
@@ -904,7 +904,7 @@ def api_v1_scan():
         
     username = user['username']
     allowed, scans_left = db_manager.check_and_increment_limit(username)
-    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан."}), 403
+    if not allowed: return jsonify({"error": "Лимит сканирований исчерпан.", "limit_exhausted": True, "hint": "Купите кредиты, чтобы продолжить сканирование без ограничений."}), 403
 
     data = request.get_json()
     if not data or 'code' not in data: return jsonify({"error": "Не передан код"}), 400
