@@ -996,9 +996,8 @@
 
             let html = '';
             if (!isHistorical && data.scans_left !== undefined) {
-                html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                html += `<div style="margin-bottom: 20px;">
                             <h3 style="margin:0;">${i18n.results_title}</h3>
-                            <span class="badge" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main);">${i18n.scans_left}: ${data.scans_left}</span>
                          </div>`;
             }
             
@@ -1374,10 +1373,10 @@ html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
 <div id="limit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10003; justify-content: center; align-items: center; padding: 20px;">
     <div class="card" style="max-width: 500px; width: 90%; padding: 35px; text-align: center; border: 2px solid var(--warning);">
         <div style="font-size: 60px; margin-bottom: 15px;">⚡</div>
-        <h2 style="margin: 0 0 15px 0; color: var(--warning); font-size: 24px;">Лимит сканирований исчерпан</h2>
+        <h2 style="margin: 0 0 15px 0; color: var(--warning); font-size: 24px;">Кредиты закончились</h2>
         <p style="color: var(--text-muted); margin-bottom: 25px; line-height: 1.6;">
-            Вы использовали все 3 бесплатных скана на сегодня.<br>
-            Купите пакет кредитов, чтобы продолжить проверку кода без ограничений.
+            Вы использовали все доступные сканирования.<br>
+            Купите пакет кредитов, чтобы продолжить проверку кода.
         </p>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button type="button" class="btn" onclick="closeLimitModal()" style="background: transparent; border: 1px solid var(--border); color: var(--text-main);">Позже</button>

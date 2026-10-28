@@ -284,37 +284,25 @@ def set_webhook(username, url):
     finally: conn.close()
 
 def check_and_increment_limit(username):
+    """Variant B: no daily limit. Each scan costs 1 credit. Paid plans are unlimited."""
     conn = get_db()
     try:
         cursor = conn.cursor()
-        user = cursor.execute("SELECT scans_today, last_scan_date, plan, credits FROM users WHERE username = ?", (username,)).fetchone()
+        user = cursor.execute("SELECT plan, credits FROM users WHERE username = ?", (username,)).fetchone()
         if not user: return False, 0
-        today = date.today().isoformat()
-        scans_today = user['scans_today'] or 0
-        # last_scan_date может быть datetime.date (Postgres) или строкой (SQLite)
-        last_date = user['last_scan_date']
-        if hasattr(last_date, 'isoformat'):
-            last_date = last_date.isoformat()
-        if str(last_date) != today:
-            scans_today = 0
-        
+
+        # Платные тарифы — безлимит
         if user['plan'] != 'free':
             return True, 9999
 
-        limit = 3
-        if scans_today < limit:
-            cursor.execute("UPDATE users SET scans_today = ?, last_scan_date = ? WHERE username = ?", (scans_today + 1, today, username))
+        # Free: каждый скан списывает 1 кредит
+        credits = user['credits'] or 0
+        if credits > 0:
+            cursor.execute("UPDATE users SET credits = credits - 1 WHERE username = ?", (username,))
+            cursor.execute("INSERT INTO credit_transactions (username, amount, reason) VALUES (?, ?, ?)", (username, -1, 'scan'))
             conn.commit()
-            return True, limit - (scans_today + 1)
-        else:
-            # Лимит исчерпан, проверяем кредиты
-            credits = user['credits'] or 0
-            if credits > 0:
-                cursor.execute("UPDATE users SET credits = credits - 1 WHERE username = ?", (username,))
-                cursor.execute("INSERT INTO credit_transactions (username, amount, reason) VALUES (?, ?, ?)", (username, -1, 'scan_credit'))
-                conn.commit()
-                return True, credits - 1
-            return False, 0
+            return True, credits - 1
+        return False, 0
     finally:
         conn.close()
 
