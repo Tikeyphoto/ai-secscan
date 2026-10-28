@@ -1236,8 +1236,9 @@ html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
         confirmCallback = callback;
         
         document.getElementById('confirm-btn-yes').onclick = () => {
+            const cb = confirmCallback;
             closeConfirm();
-            if (confirmCallback) confirmCallback();
+            if (cb) cb();
         };
     }
     function closeConfirm() {
