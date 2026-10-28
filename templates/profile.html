@@ -172,7 +172,17 @@
 
             <!-- 1. СКАНЕР -->
             <div id="tab-scan" class="tab-content active">
-                <h2><i class="fa-solid fa-magnifying-glass"></i> {{ t('profile.scan_title') }}</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;"><i class="fa-solid fa-magnifying-glass"></i> {{ t('profile.scan_title') }}</h2>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <span style="background: rgba(99, 102, 241, 0.2); color: var(--primary); padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                            <i class="fa-solid fa-bolt"></i> Кредиты: <span id="userCredits">{{ user['credits'] or 0 }}</span>
+                        </span>
+                        <button type="button" class="btn" onclick="openCreditsModal()" style="background: var(--success); font-size: 13px; padding: 6px 12px;">
+                            <i class="fa-solid fa-cart-plus"></i> Докупить
+                        </button>
+                    </div>
+                </div>
                 
                 <label class="ai-switch" for="useAi" style="margin-top: 20px;">
                     <input type="checkbox" id="useAi">
@@ -563,7 +573,67 @@
                 </div>
             </div>
 
-        </main>
+        
+<!-- Модальное окно покупки кредитов -->
+<div id="credits-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
+    <div class="card" style="max-width: 800px; width: 90%; padding: 30px; position: relative;">
+        <button onclick="closeCreditsModal()" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;">&times;</button>
+        <h2 style="text-align: center; margin-bottom: 10px;"><i class="fa-solid fa-bolt" style="color: var(--warning);"></i> Докупить сканирования</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">Кредиты не сгорают и используются, когда исчерпан дневной лимит (3 скана).</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <!-- Старт -->
+            <div class="card" style="text-align: center; border: 1px solid var(--border);">
+                <h3 style="font-size: 18px;">Старт</h3>
+                <div style="font-size: 32px; font-weight: bold; color: var(--primary); margin: 15px 0;">5 BYN</div>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">10 сканирований</p>
+                <button class="btn" onclick="buyPackage('start')" style="width: 100%; background: var(--primary);">Купить</button>
+            </div>
+            <!-- Бизнес -->
+            <div class="card" style="text-align: center; border: 2px solid var(--success); transform: scale(1.05);">
+                <div style="background: var(--success); color: white; padding: 4px 10px; border-radius: 10px; font-size: 11px; display: inline-block; margin-top: -15px;">Выгодно</div>
+                <h3 style="font-size: 18px;">Бизнес</h3>
+                <div style="font-size: 32px; font-weight: bold; color: var(--success); margin: 15px 0;">20 BYN</div>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">50 сканирований</p>
+                <button class="btn" onclick="buyPackage('business')" style="width: 100%; background: var(--success);">Купить</button>
+            </div>
+            <!-- Про -->
+            <div class="card" style="text-align: center; border: 1px solid var(--border);">
+                <h3 style="font-size: 18px;">Про</h3>
+                <div style="font-size: 32px; font-weight: bold; color: var(--ai-color); margin: 15px 0;">60 BYN</div>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">200 сканирований</p>
+                <button class="btn" onclick="buyPackage('pro')" style="width: 100%; background: var(--ai-color);">Купить</button>
+            </div>
+        </div>
+        <p style="text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 20px;">MVP-режим: начисление происходит мгновенно без реальной оплаты.</p>
+    </div>
+</div>
+
+<script>
+    function openCreditsModal() { document.getElementById('credits-modal').style.display = 'flex'; }
+    function closeCreditsModal() { document.getElementById('credits-modal').style.display = 'none'; }
+    
+    async function buyPackage(pkg) {
+        showConfirm('Подтвердить покупку?', 'MVP: деньги не списываются', async () => {
+            try {
+                const res = await fetch('/api/buy_credits', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ package: pkg })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message, 'success');
+                    document.getElementById('userCredits').innerText = parseInt(document.getElementById('userCredits').innerText) + data.amount;
+                    closeCreditsModal();
+                } else {
+                    showToast(data.error || 'Ошибка', 'error');
+                }
+            } catch (e) { showToast('Ошибка сети', 'error'); }
+        });
+    }
+</script>
+</main>
     </div>
 
     <script>
@@ -1132,5 +1202,49 @@ html += `<div style="display: flex; gap: 10px; margin-bottom: 20px;">
 
     </script>
     {% include 'includes/cookie_banner.html' %}
+
+<!-- Кастомные модалки -->
+<div id="toast-container" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; display: flex; flex-direction: column; gap: 10px;"></div>
+
+<div id="confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+    <div class="card" style="max-width: 400px; width: 90%; padding: 25px; text-align: center; border: 1px solid var(--border);">
+        <h3 id="confirm-title" style="margin-top: 0; color: var(--text-main);">Подтверждение</h3>
+        <p id="confirm-desc" style="color: var(--text-muted); margin-bottom: 25px;"></p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button type="button" class="btn" onclick="closeConfirm()" style="background: transparent; border: 1px solid var(--border); color: var(--text-main);">Отмена</button>
+            <button type="button" class="btn" id="confirm-btn-yes" style="background: var(--primary);">ОК</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        const color = type === 'success' ? 'var(--success)' : (type === 'error' ? 'var(--danger)' : 'var(--primary)');
+        toast.style.cssText = `background: var(--bg-surface); border-left: 4px solid ${color}; color: var(--text-main); padding: 15px 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin-bottom: 10px; font-size: 14px; animation: slideDown 0.3s ease;`;
+        toast.innerText = message;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+
+    let confirmCallback = null;
+    function showConfirm(title, desc, callback) {
+        document.getElementById('confirm-title').innerText = title;
+        document.getElementById('confirm-desc').innerText = desc;
+        document.getElementById('confirm-modal').style.display = 'flex';
+        confirmCallback = callback;
+        
+        document.getElementById('confirm-btn-yes').onclick = () => {
+            closeConfirm();
+            if (confirmCallback) confirmCallback();
+        };
+    }
+    function closeConfirm() {
+        document.getElementById('confirm-modal').style.display = 'none';
+        confirmCallback = null;
+    }
+</script>
+
 </body>
 </html>

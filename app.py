@@ -1145,6 +1145,33 @@ def api_clear_history():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/buy_credits', methods=['POST'])
+def api_buy_credits():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    username = session['username']
+    data = request.get_json() or {}
+    package = data.get('package')
+
+    packages = {
+        'start': {'amount': 10, 'price': 5},
+        'business': {'amount': 50, 'price': 20},
+        'pro': {'amount': 200, 'price': 60}
+    }
+
+    if package not in packages:
+        return jsonify({"error": "Неверный пакет"}), 400
+
+    # MVP: имитация успешной оплаты (потом заменим на вебхук Оплати/WebPay)
+    amount = packages[package]['amount']
+    price = packages[package]['price']
+    
+    if db_manager.add_credits(username, amount, f'mock_purchase_{package}'):
+        audit('credits_purchased', details={'package': package, 'amount': amount, 'price': price})
+        return jsonify({"status": "success", "amount": amount, "message": f"Начислено {amount} сканов (тестовый режим)"})
+    else:
+        return jsonify({"error": "Ошибка начисления"}), 500
+
+
 @app.route('/api/cookie_consent', methods=['POST'])
 def api_cookie_consent():
     data = request.get_json() or {}

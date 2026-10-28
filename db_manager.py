@@ -99,7 +99,7 @@ def _init_db_postgres():
     conn = _get_db_postgres()
     try:
         cur = conn._c.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS users (id BIGSERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE, api_key TEXT, webhook_url TEXT, email TEXT, is_verified INTEGER DEFAULT 1, totp_secret TEXT, is_admin INTEGER DEFAULT 0)")
+        cur.execute("CREATE TABLE IF NOT EXISTS users (id BIGSERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE, api_key TEXT, webhook_url TEXT, email TEXT, is_verified INTEGER DEFAULT 1, totp_secret TEXT, is_admin INTEGER DEFAULT 0, credits INTEGER DEFAULT 0)")
         cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_api_key ON users(api_key)")
         cur.execute("CREATE TABLE IF NOT EXISTS api_keys (id BIGSERIAL PRIMARY KEY, username TEXT, api_key TEXT UNIQUE, name TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("CREATE TABLE IF NOT EXISTS weights (rule_id TEXT PRIMARY KEY, weight REAL DEFAULT 1.0, tp INTEGER DEFAULT 0, fp INTEGER DEFAULT 0)")
@@ -110,6 +110,7 @@ def _init_db_postgres():
         cur.execute("CREATE TABLE IF NOT EXISTS invite_codes (id BIGSERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL, plan TEXT DEFAULT 'pro', created_by TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, used_by TEXT, used_at TIMESTAMP, expires_at TIMESTAMP, max_uses INTEGER DEFAULT 1, current_uses INTEGER DEFAULT 0)")
         cur.execute("CREATE TABLE IF NOT EXISTS sboms (username TEXT PRIMARY KEY, filename TEXT, sbom_json TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("CREATE TABLE IF NOT EXISTS audit_log (id BIGSERIAL PRIMARY KEY, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, username TEXT, action TEXT NOT NULL, target TEXT, details TEXT, ip_address TEXT, user_agent TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS credit_transactions (id BIGSERIAL PRIMARY KEY, username TEXT, amount INTEGER, reason TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("CREATE TABLE IF NOT EXISTS organizations (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, owner_username TEXT NOT NULL, plan TEXT DEFAULT 'team', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("CREATE TABLE IF NOT EXISTS org_members (org_id BIGINT, username TEXT, role TEXT DEFAULT 'scanner', joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(org_id, username))")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_org_members_username ON org_members(username)")
@@ -130,7 +131,7 @@ def _init_db_sqlite():
         conn.execute('PRAGMA journal_mode=WAL;')
         cursor = conn.cursor()
         
-        cursor.execute('''CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE, credits INTEGER DEFAULT 0)''')
         
         cursor.execute("PRAGMA table_info(users)")
         columns = [info[1] for info in cursor.fetchall()]
@@ -157,6 +158,7 @@ def _init_db_sqlite():
         cursor.execute('''CREATE TABLE IF NOT EXISTS custom_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, rule_id TEXT, severity TEXT, pattern TEXT, message TEXT)''')
         
         # Таблица для SBOM
+        cursor.execute("CREATE TABLE IF NOT EXISTS credit_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, amount INTEGER, reason TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
         cursor.execute('''CREATE TABLE IF NOT EXISTS invite_codes (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE NOT NULL, plan TEXT DEFAULT 'pro', created_by TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, used_by TEXT, used_at DATETIME, expires_at DATETIME, max_uses INTEGER DEFAULT 1, current_uses INTEGER DEFAULT 0)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS sboms (
             username TEXT PRIMARY KEY, filename TEXT, sbom_json TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
@@ -273,17 +275,44 @@ def check_and_increment_limit(username):
     conn = get_db()
     try:
         cursor = conn.cursor()
-        user = cursor.execute("SELECT scans_today, last_scan_date, plan FROM users WHERE username = ?", (username,)).fetchone()
+        user = cursor.execute("SELECT scans_today, last_scan_date, plan, credits FROM users WHERE username = ?", (username,)).fetchone()
         if not user: return False, 0
         today = date.today().isoformat()
         scans_today = user['scans_today'] or 0
         if user['last_scan_date'] != today: scans_today = 0
-        limit = 5 if user['plan'] == 'free' else 9999
-        if scans_today >= limit: return False, 0
-        cursor.execute("UPDATE users SET scans_today = ?, last_scan_date = ? WHERE username = ?", (scans_today + 1, today, username))
+        
+        if user['plan'] != 'free':
+            return True, 9999
+
+        limit = 3
+        if scans_today < limit:
+            cursor.execute("UPDATE users SET scans_today = ?, last_scan_date = ? WHERE username = ?", (scans_today + 1, today, username))
+            conn.commit()
+            return True, limit - (scans_today + 1)
+        else:
+            # Лимит исчерпан, проверяем кредиты
+            credits = user['credits'] or 0
+            if credits > 0:
+                cursor.execute("UPDATE users SET credits = credits - 1 WHERE username = ?", (username,))
+                cursor.execute("INSERT INTO credit_transactions (username, amount, reason) VALUES (?, ?, ?)", (username, -1, 'scan_credit'))
+                conn.commit()
+                return True, credits - 1
+            return False, 0
+    finally:
+        conn.close()
+
+def add_credits(username, amount, reason='purchase'):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET credits = credits + ? WHERE username = ?", (amount, username))
+        conn.execute("INSERT INTO credit_transactions (username, amount, reason) VALUES (?, ?, ?)", (username, amount, reason))
         conn.commit()
-        return True, limit - (scans_today + 1)
-    finally: conn.close()
+        return True
+    except Exception as e:
+        print(f"[CREDITS] Error: {e}", flush=True)
+        return False
+    finally:
+        conn.close()
 
 def get_user_scans(username, limit=10):
     conn = get_db()
