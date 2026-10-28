@@ -99,7 +99,7 @@ def _init_db_postgres():
     conn = _get_db_postgres()
     try:
         cur = conn._c.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS users (id BIGSERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE, api_key TEXT, webhook_url TEXT, email TEXT, is_verified INTEGER DEFAULT 1, totp_secret TEXT, is_admin INTEGER DEFAULT 0, credits INTEGER DEFAULT 0)")
+        cur.execute("CREATE TABLE IF NOT EXISTS users (id BIGSERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, plan TEXT DEFAULT 'free', scans_today INTEGER DEFAULT 0, last_scan_date DATE, api_key TEXT, webhook_url TEXT, email TEXT, is_verified INTEGER DEFAULT 1, totp_secret TEXT, is_admin INTEGER DEFAULT 0, credits INTEGER DEFAULT 0, ref_code TEXT, referred_by TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_api_key ON users(api_key)")
         cur.execute("CREATE TABLE IF NOT EXISTS api_keys (id BIGSERIAL PRIMARY KEY, username TEXT, api_key TEXT UNIQUE, name TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         cur.execute("CREATE TABLE IF NOT EXISTS weights (rule_id TEXT PRIMARY KEY, weight REAL DEFAULT 1.0, tp INTEGER DEFAULT 0, fp INTEGER DEFAULT 0)")
@@ -173,12 +173,16 @@ def _init_db_sqlite():
     finally:
         conn.close()
 
-def create_user(username, password_hash, email, is_verified=1, plan='pro'):
+def create_user(username, password_hash, email, is_verified=1, plan='pro', referred_by=None):
+    import uuid
     conn = get_db()
     try:
         count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
         is_admin = 1 if count == 0 else 0
-        conn.execute("INSERT INTO users (username, password_hash, email, is_verified, plan, is_admin) VALUES (?, ?, ?, ?, ?, ?)", (username, password_hash, email, is_verified, plan, is_admin))
+        ref_code = f"{username[:4].lower()}{uuid.uuid4().hex[:4]}"
+        
+        conn.execute("INSERT INTO users (username, password_hash, email, is_verified, plan, is_admin, ref_code, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+                     (username, password_hash, email, is_verified, plan, is_admin, ref_code, referred_by))
         conn.commit()
         return True
     except sqlite3.IntegrityError: return False
@@ -749,3 +753,26 @@ def is_org_admin(org_id, username):
     """True, если пользователь — owner или admin организации."""
     role = get_user_role_in_org(org_id, username)
     return role in ('owner', 'admin')
+
+
+def get_user_by_ref_code(ref_code):
+    conn = get_db()
+    try:
+        return conn.execute("SELECT * FROM users WHERE ref_code = ?", (ref_code,)).fetchone()
+    finally:
+        conn.close()
+
+def get_referral_stats(username):
+    conn = get_db()
+    try:
+        invited = conn.execute("SELECT COUNT(*) FROM users WHERE referred_by = ?", (username,)).fetchone()[0]
+        earned = conn.execute("SELECT SUM(amount) FROM credit_transactions WHERE username = ? AND (reason LIKE 'referral_bonus_for_%' OR reason LIKE 'referral_purchase_bonus_%')", (username,)).fetchone()[0]
+        users = conn.execute("SELECT username, created_at FROM users WHERE referred_by = ? ORDER BY id DESC", (username,)).fetchall()
+        
+        return {
+            "invited_count": invited,
+            "earned_credits": earned or 0,
+            "users": [dict(u) for u in users]
+        }
+    finally:
+        conn.close()

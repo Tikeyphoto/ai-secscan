@@ -64,6 +64,27 @@
                     input.style.background = 'rgba(16, 185, 129, 0.1)';
                 }
             }
+
+            // Автозаполнение реферального кода (?ref=XXXX)
+            const refCode = urlParams.get('ref');
+            if (refCode) {
+                let refInput = document.querySelector('input[name="ref_code"]');
+                if (!refInput) {
+                    refInput = document.createElement('input');
+                    refInput.type = 'hidden';
+                    refInput.name = 'ref_code';
+                    document.querySelector('form').appendChild(refInput);
+                }
+                refInput.value = refCode;
+                
+                // Скрываем поле инвайт-кода, чтобы не путать пользователя
+                const inviteField = document.querySelector('input[name="invite_code"]');
+                if (inviteField) {
+                    inviteField.style.display = 'none';
+                    // Очищаем его на всякий случай
+                    inviteField.value = '';
+                }
+            }
         });
     </script>
     {% include 'includes/cookie_banner.html' %}

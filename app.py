@@ -275,14 +275,31 @@ def register():
         password = request.form['password']
         invite_code = request.form.get('invite_code', '').strip()
         
-        plan = 'pro'
+        plan = 'free'
         if invite_code:
             code_data = db_manager.validate_invite(invite_code)
             if not code_data:
                 return render_template('register.html', error="Неверный или просроченный код приглашения.")
             plan = code_data['plan']
         
-        if db_manager.create_user(username, generate_password_hash(password), email, 0, plan):
+        # Обработка реферального кода
+        ref_code = request.args.get('ref') or request.form.get('ref_code', '')
+        referrer = db_manager.get_user_by_ref_code(ref_code) if ref_code else None
+        referrer_username = referrer['username'] if referrer else None
+
+        if db_manager.create_user(username, generate_password_hash(password), email, 0, plan, referred_by=referrer_username):
+            
+            # Гибридная логика (Вариант C):
+            # - Всем новым юзерам: +3 кредита (welcome bonus)
+            # - Если пришли по реф-ссылке: ещё +3 кредита (итого 6)
+            # - Пригласившему: +3 кредита
+            db_manager.add_credits(username, 3, 'welcome_bonus')
+            
+            if referrer_username:
+                db_manager.add_credits(username, 3, f'referral_extra_bonus')
+                db_manager.add_credits(referrer_username, 3, f'referral_bonus_for_{username}')
+                audit('referral_registration', target=username, username_override=referrer_username, details={'invited_bonus': 6, 'referrer_bonus': 3})
+
             if invite_code:
                 db_manager.use_invite(invite_code, username)
                 try:
@@ -1145,6 +1162,12 @@ def api_clear_history():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/referral/stats')
+def api_referral_stats():
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    return jsonify(db_manager.get_referral_stats(session['username']))
+
+
 @app.route('/api/buy_credits', methods=['POST'])
 def api_buy_credits():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
@@ -1166,6 +1189,13 @@ def api_buy_credits():
     price = packages[package]['price']
     
     if db_manager.add_credits(username, amount, f'mock_purchase_{package}'):
+        # Бонус рефереру (10% от купленного пакета, минимум 1)
+        user = db_manager.get_user(username)
+        if user and user['referred_by']:
+            ref_bonus = max(1, amount // 10)
+            db_manager.add_credits(user['referred_by'], ref_bonus, f'referral_purchase_bonus_from_{username}')
+            audit('referral_purchase_bonus', target=user['referred_by'], details={'from_user': username, 'bonus': ref_bonus})
+        
         audit('credits_purchased', details={'package': package, 'amount': amount, 'price': price})
         return jsonify({"status": "success", "amount": amount, "message": f"Начислено {amount} сканов (тестовый режим)"})
     else:
