@@ -1311,6 +1311,87 @@ def api_referral_stats():
     return jsonify(db_manager.get_referral_stats(session['username']))
 
 
+@app.route('/api/create_payment', methods=['POST'])
+def api_create_payment():
+    """Создает заказ и возвращает ссылку на оплату (сейчас заглушка)."""
+    if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401
+    username = session['username']
+    
+    data = request.get_json() or {}
+    package = data.get('package')
+    
+    packages = {
+        'start': {'amount': 10, 'price': 5},
+        'business': {'amount': 50, 'price': 20},
+        'pro': {'amount': 200, 'price': 60}
+    }
+    
+    if package not in packages:
+        return jsonify({"error": "Неверный пакет"}), 400
+        
+    import uuid
+    order_id = f"mock_{uuid.uuid4().hex[:12]}"
+    credits = packages[package]['amount']
+    price = packages[package]['price']
+    
+    if not db_manager.create_payment_record(username, package, credits, price, 'mock', order_id):
+        return jsonify({"error": "Ошибка создания заказа"}), 500
+        
+    # В ДЕКАБРЕ: здесь будет запрос к API Оплати/WebPay, который вернет реальный URL
+    payment_url = f"/mock_payment/{order_id}"
+    
+    return jsonify({"status": "success", "payment_url": payment_url, "order_id": order_id})
+
+
+@app.route('/mock_payment/<order_id>')
+def mock_payment_page(order_id):
+    """Тестовая страница, имитирующая шлюз оплаты."""
+    if 'username' not in session: return redirect(url_for('login'))
+    payment = db_manager.get_payment_record(order_id)
+    if not payment:
+        return "Заказ не найден", 404
+        
+    html = f"""
+    <html><head><title>Оплата (Тест)</title></head>
+    <body style="background: #0f0f13; color: white; font-family: sans-serif; text-align: center; padding-top: 100px;">
+        <h2>Имитация платёжной системы</h2>
+        <p>Вы покупаете пакет <b>{payment['package']}</b> за <b>{payment['amount_byn']} BYN</b> ({payment['amount_credits']} кредитов)</p>
+        <form action="/api/webhook/payment" method="POST" style="margin-top: 30px;">
+            <input type="hidden" name="order_id" value="{order_id}">
+            <button type="submit" style="padding: 15px 30px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Оплатить (симуляция)</button>
+        </form>
+        <p style="margin-top: 30px; color: #64748b; font-size: 12px;">В реальности здесь будет сайт Оплати/WebPay</p>
+    </body></html>
+    """
+    return html
+
+
+@app.route('/api/webhook/payment', methods=['POST'])
+def api_webhook_payment():
+    """Вебхук от платежной системы."""
+    order_id = request.form.get('order_id') or (request.json and request.json.get('order_id'))
+    
+    if not order_id:
+        return "No order_id", 400
+        
+    payment = db_manager.get_payment_record(order_id)
+    if not payment:
+        return "Order not found", 404
+        
+    if payment['status'] == 'paid':
+        return "Already paid", 200
+        
+    if db_manager.mark_payment_paid(order_id):
+        db_manager.add_credits(payment['username'], payment['amount_credits'], f"purchase_{order_id}")
+        audit('payment_success', target=order_id, details={'amount': payment['amount_byn'], 'credits': payment['amount_credits']})
+        
+        if request.content_type and 'application/json' in request.content_type:
+            return jsonify({"status": "ok"}), 200
+        return redirect(url_for('profile'))
+
+    return "Error processing payment", 500
+
+
 @app.route('/api/buy_credits', methods=['POST'])
 def api_buy_credits():
     if 'username' not in session: return jsonify({"error": "Не авторизован"}), 401

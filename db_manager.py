@@ -789,3 +789,38 @@ def get_referral_stats(username):
         }
     finally:
         conn.close()
+
+
+# ============ PAYMENTS ============
+def create_payment_record(username, package, amount_credits, amount_byn, provider, provider_order_id):
+    conn = get_db()
+    try:
+        conn.execute("""INSERT INTO payments (username, package, amount_credits, amount_byn, provider, provider_order_id, status)
+                        VALUES (?, ?, ?, ?, ?, ?, 'pending')""", 
+                     (username, package, amount_credits, amount_byn, provider, provider_order_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[PAYMENT DB] Error: {e}", flush=True)
+        return False
+    finally:
+        conn.close()
+
+def get_payment_record(provider_order_id):
+    conn = get_db()
+    try:
+        return conn.execute("SELECT * FROM payments WHERE provider_order_id = ?", (provider_order_id,)).fetchone()
+    finally:
+        conn.close()
+
+def mark_payment_paid(provider_order_id):
+    conn = get_db()
+    try:
+        conn.execute("UPDATE payments SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE provider_order_id = ?", (provider_order_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[PAYMENT DB] Error marking paid: {e}", flush=True)
+        return False
+    finally:
+        conn.close()

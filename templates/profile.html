@@ -669,20 +669,19 @@
     }
 
     function proceedPurchase(pkg) {
-        showConfirm('Подтвердить покупку?', 'MVP: деньги не списываются', async () => {
+        showConfirm('Подтвердить покупку?', 'Вы будете перенаправлены на страницу оплаты.', async () => {
             try {
-                const res = await fetch('/api/buy_credits', {
+                const res = await fetch('/api/create_payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ package: pkg })
                 });
                 const data = await res.json();
-                if (res.ok) {
-                    showToast(data.message, 'success');
-                    document.getElementById('userCredits').innerText = parseInt(document.getElementById('userCredits').innerText) + data.amount;
-                    closeCreditsModal();
+                if (res.ok && data.payment_url) {
+                    // Перенаправляем на страницу оплаты (в декабре - на Оплати/WebPay)
+                    window.location.href = data.payment_url;
                 } else {
-                    showToast(data.error || 'Ошибка', 'error');
+                    showToast(data.error || 'Ошибка создания заказа', 'error');
                 }
             } catch (e) { showToast('Ошибка сети', 'error'); }
         });
