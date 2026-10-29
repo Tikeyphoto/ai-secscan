@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-SecScan - Умная проверка кода</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <meta name="description" content="AI-SecScan — статический анализатор кода (SAST) с локальной AI-моделью. 100% On-Premise, поиск уязвимостей, AI-автофикс и отчеты OWASP/CWE. Для банков и IT-команд.">
     <link rel="stylesheet" href="/static/style.css">
 
     <script>
@@ -54,7 +59,7 @@
             <a href="#faq">{{ t('nav.faq') }}</a>
             <a href="/presentation" target="_blank" style="color: #f9e2af;">📊 {{ t('nav.presentation') }}</a>
             
-            <button id="theme-btn" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; margin-right: 15px;"><i class="fa-solid fa-sun theme-icon"></i></button><select onchange="window.location.href='/set_lang/'+this.value" class="lang-select" style="margin-right: 15px;">
+            <button id="theme-btn" aria-label="Переключить тему" onclick="toggleTheme()" style="background: transparent; border: none; color: var(--text-main); font-size: 18px; cursor: pointer; margin-right: 15px;"><i class="fa-solid fa-sun theme-icon"></i></button><select onchange="window.location.href='/set_lang/'+this.value" class="lang-select" aria-label="Выбрать язык" style="margin-right: 15px;">
                 <option value="ru" {% if current_lang == 'ru' %}selected{% endif %}>🇷🇺 RU</option>
                 <option value="en" {% if current_lang == 'en' %}selected{% endif %}>🇬🇧 EN</option>
                 <option value="zh" {% if current_lang == 'zh' %}selected{% endif %}>🇨🇳 中文</option>
@@ -64,6 +69,7 @@
             <a href="/register" class="btn-nav primary">{{ t('nav.register') }}</a>
         </div>
     </nav>
+    <main>
 
     <header class="hero">
         <div class="hero-content">
@@ -137,7 +143,7 @@
             <!-- Большая оценка A -->
             <div style="background: #16a34a; color: #fff; border-radius: 20px; width: 140px; height: 140px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 10px 30px rgba(22, 163, 74, 0.3);">
                 <span style="font-size: 64px; font-weight: 900; line-height: 1;">A</span>
-                <span style="font-size: 14px; font-weight: 700; margin-top: 5px;">{{ t('landing.sec.a') }}</span>
+                <span style="font-size: 14px; font-weight: 700; margin-top: 5px; color: #fff;">{{ t('landing.sec.a') }}</span>
             </div>
 
             <!-- Список проверок -->
@@ -171,7 +177,7 @@
         <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 40px;" class="fade-in-up">
             <span id="label-monthly" style="font-weight: bold; color: var(--text-main);">{{ t('landing.price.monthly') }}</span>
             <label class="switch">
-                <input type="checkbox" id="billingToggle" onchange="toggleBilling()">
+                <input type="checkbox" id="billingToggle" onchange="toggleBilling()" aria-label="Переключить на годовую оплату">
                 <span class="slider round"></span>
             </label>
             <span id="label-yearly" style="font-weight: bold; color: var(--text-muted);">{{ t('landing.price.yearly') }} <span style="background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 5px;">{{ t('landing.price.save') }}</span></span>
@@ -190,7 +196,7 @@
                     <li class="disabled"><i class="fa-solid fa-xmark"></i> {{ t('landing.price.free.f4') }}</li>
                     <li class="disabled"><i class="fa-solid fa-xmark"></i> {{ t('landing.price.free.f5') }}</li>
                 </ul>
-                <a href="/register" class="btn-pricing outline" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
+                <a href="/register" class="btn-pricing outline" aria-label="Начать с тарифом Free" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
             </div>
 
             <!-- Pro -->
@@ -209,7 +215,7 @@
                     <li><i class="fa-solid fa-check"></i> {{ t('landing.price.pro.f4') }}</li>
                     <li class="disabled"><i class="fa-solid fa-xmark"></i> {{ t('landing.price.pro.f5') }}</li>
                 </ul>
-                <a href="/register" class="btn-pricing primary" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
+                <a href="/register" class="btn-pricing primary" aria-label="Выбрать тариф Pro" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
             </div>
 
             <!-- Startup -->
@@ -228,12 +234,12 @@
                     <li><i class="fa-solid fa-check"></i> {{ t('landing.price.startup.f4') }}</li>
                     <li><i class="fa-solid fa-check"></i> {{ t('landing.price.startup.f5') }}</li>
                 </ul>
-                <a href="/register" class="btn-pricing outline" style="border-color: #10b981; color: var(--text-main);" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
+                <a href="/register" class="btn-pricing outline" aria-label="Выбрать тариф Startup" style="border-color: #10b981; color: var(--text-main);" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
             </div>
 
             <!-- Team -->
             <div class="pricing-card fade-in-up" style="transition-delay: 0.3s; border-color: #f9e2af;">
-                <div class="popular-badge" style="background: #f59e0b; color: white;">{{ t('landing.price.badge_team') }}</div>
+                <div class="popular-badge" style="background: #f59e0b; color: #000;">{{ t('landing.price.badge_team') }}</div>
                 <h3>Team</h3>
                 <div class="price">
                     <span class="price-monthly">249 <span>{{ t('landing.price.team.price') }}</span></span>
@@ -247,7 +253,7 @@
                     <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f4') }}</li>
                     <li><i class="fa-solid fa-check"></i> {{ t('landing.price.team.f5') }}</li>
                 </ul>
-                <a href="/register" class="btn-pricing outline" style="border-color: #f59e0b; color: var(--text-main);" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
+                <a href="/register" class="btn-pricing outline" aria-label="Выбрать тариф Team" style="border-color: #f59e0b; color: #fff;" onclick="window.location.href='/register'">{{ t('landing.beta_btn') }}</a>
             </div>
 
             <!-- Enterprise -->
@@ -298,6 +304,7 @@
         </div>
     </section>
 
+    </main>
     <footer class="landing-footer">
         <p>{{ t('landing.footer.text') }}</p>
     </footer>

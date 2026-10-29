@@ -796,3 +796,22 @@ html[lang="ru"] .section-title {
         white-space: normal;
     }
 }
+
+
+/* PageSpeed Fixes */
+@font-face {
+    font-family: 'Font Awesome 6 Free';
+    font-display: swap; /* Убирает блокировку текста при загрузке иконок */
+}
+
+/* Контраст: Начать бесплатно в меню (белый на синем может быть < 4.5:1) */
+.btn-nav.primary {
+    background: #4f46e5 !important; /* Чуть темнее */
+    color: #ffffff !important;
+}
+
+/* Контраст: Cookie Banner */
+#cookie-banner .btn[style*="background: transparent"] {
+    border-color: #94a3b8 !important;
+    color: #e2e8f0 !important;
+}
