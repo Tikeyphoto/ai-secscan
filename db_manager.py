@@ -284,18 +284,19 @@ def set_webhook(username, url):
     finally: conn.close()
 
 def check_and_increment_limit(username):
-    """Variant B: no daily limit. Each scan costs 1 credit. Paid plans are unlimited."""
+    """Variant B: no daily limit. Each scan costs 1 credit.
+    Pro / Free — pay-per-credit. Startup/Team/Enterprise — unlimited."""
     conn = get_db()
     try:
         cursor = conn.cursor()
         user = cursor.execute("SELECT plan, credits FROM users WHERE username = ?", (username,)).fetchone()
         if not user: return False, 0
 
-        # Платные тарифы — безлимит
-        if user['plan'] != 'free':
+        # Бизнес-тарифы (Startup/Team/Enterprise) — безлимит
+        if user['plan'] in ('startup', 'team', 'enterprise'):
             return True, 9999
 
-        # Free: каждый скан списывает 1 кредит
+        # Free и Pro: каждый скан списывает 1 кредит
         credits = user['credits'] or 0
         if credits > 0:
             cursor.execute("UPDATE users SET credits = credits - 1 WHERE username = ?", (username,))
@@ -352,10 +353,19 @@ def get_user_trend(username):
 
 
 def change_user_plan(username, new_plan):
+    """Смена тарифа. При переходе на Pro начисляет 100 кредитов (единоразово)."""
     conn = get_db()
     try:
+        old = conn.execute("SELECT plan FROM users WHERE username = ?", (username,)).fetchone()
+        old_plan = old['plan'] if old else None
+        
         conn.execute("UPDATE users SET plan = ? WHERE username = ?", (new_plan, username))
         conn.commit()
+        
+        # Если перешли на Pro — начисляем 100 кредитов (только если это новый переход)
+        if new_plan == 'pro' and old_plan != 'pro':
+            add_credits(username, 100, 'pro_plan_monthly')
+            print(f"[PLAN] {username}: +100 credits for Pro plan", flush=True)
     finally:
         conn.close()
 
@@ -364,6 +374,8 @@ def upgrade_user_plan(username):
     try:
         conn.execute("UPDATE users SET plan = 'pro' WHERE username = ?", (username,))
         conn.commit()
+        add_credits(username, 100, 'pro_plan_upgrade')
+        print(f"[PLAN] {username}: +100 credits for Pro upgrade", flush=True)
     finally: conn.close()
 
 def save_scan_report(username, filename, findings):

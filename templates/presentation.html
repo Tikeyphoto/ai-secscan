@@ -42,7 +42,7 @@
         </select>
     </div>
 
-    <div class="slide-counter" id="counter">1 / 10</div>
+    <div class="slide-counter" id="counter">1 / 11</div>
 
     <!-- Слайд 1: Титул -->
     <div class="slide active center" style="text-align: center; align-items: center;">
@@ -127,6 +127,31 @@
             <div class="card"><span class="icon">👨‍💻</span><h3>{{ t('pres.who_dev') }}</h3><p>{{ t('pres.who_dev_desc') }}</p></div>
             <div class="card"><span class="icon">🏢</span><h3>{{ t('pres.who_team') }}</h3><p>{{ t('pres.who_team_desc') }}</p></div>
             <div class="card"><span class="icon">🏦</span><h3>{{ t('pres.who_bank') }}</h3><p>{{ t('pres.who_bank_desc') }}</p></div>
+        </div>
+    </div>
+
+    <!-- Слайд 7.5: Партнёрская программа -->
+    <div class="slide">
+        <div class="badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border-color: #f59e0b;">🎁 {{ t('pres.ref_badge') }}</div>
+        <h2>{{ t('pres.ref_title') }}</h2>
+        <p style="max-width: 800px; margin: 0 auto 20px auto;">{{ t('pres.ref_desc') }}</p>
+        
+        <div class="grid" style="grid-template-columns: repeat(3, 1fr); max-width: 1100px;">
+            <div class="card" style="text-align: center; border-color: #f59e0b;">
+                <div style="font-size: 40px; margin-bottom: 15px;">🔗</div>
+                <h3 style="font-size: 18px;">{{ t('pres.ref_step1') }}</h3>
+                <p style="font-size: 14px;">{{ t('pres.ref_step1_desc') }}</p>
+            </div>
+            <div class="card" style="text-align: center; border-color: #f59e0b;">
+                <div style="font-size: 40px; margin-bottom: 15px;">🤝</div>
+                <h3 style="font-size: 18px;">{{ t('pres.ref_step2') }}</h3>
+                <p style="font-size: 14px;">{{ t('pres.ref_step2_desc') }}</p>
+            </div>
+            <div class="card" style="text-align: center; border-color: #f59e0b;">
+                <div style="font-size: 40px; margin-bottom: 15px;">💰</div>
+                <h3 style="font-size: 18px;">{{ t('pres.ref_step3') }}</h3>
+                <p style="font-size: 14px;">{{ t('pres.ref_step3_desc') }}</p>
+            </div>
         </div>
     </div>
 
