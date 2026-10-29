@@ -70,6 +70,11 @@
         localStorage.setItem('cookie_consent', JSON.stringify(data));
         document.getElementById('cookie-banner').style.display = 'none';
         
+        // Если аналитика разрешена — запускаем Метрику
+        if (analytics) {
+            initYandexMetrica();
+        }
+
         // Отправляем на бэкенд (для аудита)
         fetch('/api/cookie_consent', {
             method: 'POST',
@@ -91,4 +96,47 @@
         const marketing = document.getElementById('cookie-marketing').checked;
         saveConsent(analytics, marketing);
     }
+
+    // --- Yandex Metrica (GDPR-compliant) ---
+    function initYandexMetrica() {
+        if (window.ymInited) return;
+        window.ymInited = true;
+        console.log("[Analytics] Loading Yandex Metrica...");
+        
+        (function(m,e,t,r,i,k,a){
+            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+            m[i].l=1*new Date();
+            for (var j = 0; j < document.scripts.length; j++) {
+                if (document.scripts[j].src === r) { return; }
+            }
+            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=113880928', 'ym');
+
+        ym(113880928, 'init', {
+            ssr: true,
+            webvisor: true,
+            clickmap: true,
+            ecommerce: "dataLayer",
+            referrer: document.referrer,
+            url: location.href,
+            accurateTrackBounce: true,
+            trackLinks: true
+        });
+    }
+
+    function checkMetricaConsent() {
+        const consent = localStorage.getItem('cookie_consent');
+        if (consent) {
+            try {
+                const parsed = JSON.parse(consent);
+                if (parsed.analytics) {
+                    initYandexMetrica();
+                }
+            } catch(e) {}
+        }
+    }
+
+    // Проверяем согласие при загрузке страницы
+    document.addEventListener('DOMContentLoaded', checkMetricaConsent);
+
 </script>
